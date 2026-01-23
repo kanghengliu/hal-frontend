@@ -458,6 +458,7 @@ MODEL_MAPPING = [
     ("gpt-5:openai:medium", "GPT-5 Medium (August 2025)", "gpt-5"),
     ("claude-opus-4-1-20250805 high", "Claude Opus 4.1 High (August 2025)", "claude-opus-4-1-20250805"),
     ("claude-opus-4.1", "Claude Opus 4.1 (August 2025)", "claude-opus-4.1"),
+    ("claude-opus-4-1", "Claude Opus 4.1 (August 2025)", "claude-opus-4-1"),
     ("claude-opus-4.1 high", "Claude Opus 4.1 High (August 2025)", "claude-opus-4.1-high"),
     ("claude-sonnet-4-20250514_thinking_high_4096", "Claude Sonnet 4 High (May 2025)", "claude-sonnet-4-20250514_thinking_high_4096"),
     ("claude-sonnet-4-20250514", "Claude Sonnet 4 (May 2025)", "claude-sonnet-4-20250514"),
