@@ -1,0 +1,7 @@
+services:
+  hal-frontend:
+    build: .
+    container_name: hal-frontend
+    restart: unless-stopped
+    ports:
+      - "8742:8742"
