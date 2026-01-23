@@ -1740,8 +1740,10 @@ class TracePreprocessor:
                 if df.empty:
                     continue
                 
-                # Sort by accuracy and take top results
-                df_sorted = df.sort_values('Accuracy', ascending=False).head(limit_per_benchmark)
+                # Sort by accuracy, deduplicate by agent name and model, and take top results
+                df_sorted = df.sort_values('Accuracy', ascending=False)
+                df_sorted = df_sorted.drop_duplicates(subset=['Agent Name', 'Model Name'], keep='first')
+                df_sorted = df_sorted.head(limit_per_benchmark)
                 
                 # Convert to list of agent-model combinations
                 top_agents = []
