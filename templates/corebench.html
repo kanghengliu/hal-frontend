@@ -101,7 +101,7 @@
             </div>
             <div class="mb-4 p-4 bg-green-50 rounded-lg">
                 <p class="text-sm text-gray-700">
-                    <strong>Update:</strong> Running Opus 4.5 with an updated scaffold that uses Claude Code drastically outperforms the CORE-Agent scaffold we used, especially after fixing a few grading errors via manual scoring. We have now declared <a href="https://x.com/sayashk/status/1996334941832089732?t=1tFle-jfHsDHFEOSjyo9mg&s=19" class="text-green-600 hover:text-green-800 underline" target="_blank" rel="noopener noreferrer">CORE-Bench solved</a>.
+                    <strong>Update:</strong> Running Opus 4.5 with an updated scaffold that uses Claude Code (submitted by Nicholas Carlini) drastically outperforms the CORE-Agent scaffold we used, especially after fixing a few grading errors via manual scoring. We have now declared <a href="https://x.com/sayashk/status/1996334941832089732?t=1tFle-jfHsDHFEOSjyo9mg&s=19" class="text-green-600 hover:text-green-800 underline" target="_blank" rel="noopener noreferrer">CORE-Bench solved</a>.
                 </p>
             </div>
             <div class="overflow-x-auto">
@@ -224,6 +224,23 @@
                                             {{ row['Agent Name'] }}
                                         </a>
                                     {% endif %}
+                                    {% if 'Claude Code' in row['Agent Name'] %}
+                                    <span class="relative inline-flex group/info ml-1 align-middle">
+                                        <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <div class="invisible group-hover/info:visible absolute z-50 w-56 p-4 text-sm bg-white rounded-lg shadow-lg border border-gray-200 left-1/2 -translate-x-1/2 top-full mt-1">
+                                            <div class="absolute w-3 h-3 bg-white transform rotate-45 left-1/2 -translate-x-1/2 -top-1.5 border-t border-l border-gray-200"></div>
+                                            <p class="text-gray-700 mb-2">Submitted by Nicholas Carlini</p>
+                                            <a href="{{ url_for('static', filename='downloads/claude_code_main.py') }}" download class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors">
+                                                <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                                </svg>
+                                                Download main.py
+                                            </a>
+                                        </div>
+                                    </span>
+                                    {% endif %}
                                     {% if row.get('Is Pareto') %}
                                         <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Pareto optimal</span>
                                     {% endif %}
@@ -246,6 +263,9 @@
                                         <span class="text-gray-500 ml-1">({{ row['Accuracy CI'] }})</span>
                                     {% endif %}
                                 </span>
+                                {% if 'Claude Code' in row['Agent Name'] and 'Opus 4.5' in row['Models'] %}
+                                <div class="text-xs text-green-700 mt-1">(95.5% w/ manual validation)</div>
+                                {% endif %}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 ${{ "%.2f"|format(row['Total Cost']|float) }}
