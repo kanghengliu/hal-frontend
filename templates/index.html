@@ -580,7 +580,7 @@
 <div class="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
 
 <!-- Trace Analysis Section -->
-<div class="py-24 bg-gradient-to-b from-white to-gray-50 relative">
+<div id="traces" class="py-24 bg-gradient-to-b from-white to-gray-50 relative">
     <div class="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-gray-100/80 to-transparent"></div>
     <div class="container mx-auto max-w-[1500]px px-8">
         <div class="text-center mb-16">
@@ -610,7 +610,31 @@
                     </svg>
                 </div>
                 <h3 class="text-xl font-bold mb-4">Encrypted Distribution</h3>
-                <p class="text-gray-600 mb-6">All agent traces are encrypted to prevent benchmark contamination through automated scraping.</p>
+                <p class="text-gray-600 mb-4">All agent traces are encrypted to prevent benchmark contamination through automated scraping.</p>
+
+                <div class="bg-gray-50 rounded-lg p-4 text-sm">
+                    <p class="font-medium text-gray-800 mb-2">To decrypt downloaded traces:</p>
+                    <p class="text-gray-600 mb-3">
+                        <span class="font-medium">1. Install prerequisite:</span>
+                        <code class="bg-gray-200 px-1.5 py-0.5 rounded text-xs">pip install cryptography</code>
+                    </p>
+                    <p class="text-gray-600 mb-3">
+                        <span class="font-medium">2. Download the script:</span>
+                    </p>
+                    <a href="{{ url_for('static', filename='downloads/hal-decrypt.sh') }}" download class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors mb-3">
+                        <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Download hal-decrypt.sh
+                    </a>
+                    <p class="text-gray-600 mb-1">
+                        <span class="font-medium">3. Decrypt:</span>
+                    </p>
+                    <div class="space-y-1">
+                        <code class="block bg-gray-200 px-2 py-1 rounded text-xs text-gray-700">./hal-decrypt.sh -F trace.zip</code>
+                        <code class="block bg-gray-200 px-2 py-1 rounded text-xs text-gray-700">./hal-decrypt.sh -D traces/</code>
+                    </div>
+                </div>
             </div>
         </div>
 
