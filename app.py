@@ -39,7 +39,9 @@ AUTHORS = [
     {"name": "Peter Henderson", "affiliation": "Princeton University"},
     {"name": "Yu Su", "affiliation": "The Ohio State University"},
     {"name": "Percy Liang", "affiliation": "Stanford University"},
-    {"name": "Arvind Narayanan", "affiliation": "Princeton University"}
+    {"name": "Arvind Narayanan", "affiliation": "Princeton University"},
+    {"name": "Stephan Rabanser", "affiliation": "Princeton University"},
+    {"name": "Andrew Schwartz", "affiliation": "Cornflower Labs"}
 ]
 
 # Contributors (everyone else who helped with the project)
@@ -63,9 +65,7 @@ CONTRIBUTORS = [
     {"name": "William Isaac", "affiliation": "Google DeepMind"},
     {"name": "Charles Teague", "affiliation": "UK AISI"},
     {"name": "Clémentine Fourrier", "affiliation": "Hugging Face"},
-    {"name": "Kevin Meng", "affiliation": "Transluce"},
-    {"name": "Stephan Rabanser", "affiliation": "Princeton University"},
-    {"name": "Andrew Schwartz", "affiliation": "Cornflower Labs"}
+    {"name": "Kevin Meng", "affiliation": "Transluce"}
 ]
 
 
