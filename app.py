@@ -63,7 +63,9 @@ CONTRIBUTORS = [
     {"name": "William Isaac", "affiliation": "Google DeepMind"},
     {"name": "Charles Teague", "affiliation": "UK AISI"},
     {"name": "Clémentine Fourrier", "affiliation": "Hugging Face"},
-    {"name": "Kevin Meng", "affiliation": "Transluce"}
+    {"name": "Kevin Meng", "affiliation": "Transluce"},
+    {"name": "Stephan Rabanser", "affiliation": "Princeton University"},
+    {"name": "Andrew Schwartz", "affiliation": "Cornflower Labs"}
 ]
 
 
