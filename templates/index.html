@@ -709,11 +709,12 @@
                 <h3 class="text-2xl font-bold mb-4">Cite HAL</h3>
                 <div>
                     <div class="relative">
-                        <pre class="bg-gray-50 p-2 rounded-lg overflow-x-auto text-sm">@Misc{hal,
-title =        {Holistic Agent Leaderboard: The Missing Infrastructure for AI Agent Evaluation},
-author =       {Sayash Kapoor and Benedikt Stroebl and Peter Kirgis and Nitya Nadgir and Zachary S Siegel and Boyi Wei and Tianci Xue and Ziru Chen and Felix Chen and Saiteja Utpala and Franck Ndzomga and Dheeraj Oruganty and Sophie Luskin and Kangheng Liu and Botao Yu and Amit Arora and Dongyoon Hahm and Harsh Trivedi and Huan Sun and Juyong Lee and Tengjun Jin and Yifan Mai and Yifei Zhou and Yuxuan Zhu and Rishi Bommasani and Daniel Kang and Dawn Song and Peter Henderson and Yu Su and Percy Liang and Arvind Narayanan},
-howpublished = {\url{https://github.com/princeton-pli/hal-harness/}},
-year =         {2025}}</pre>
+                        <pre class="bg-gray-50 p-2 rounded-lg overflow-x-auto text-sm">@inproceedings{hal,
+title =     {Holistic Agent Leaderboard: The Missing Infrastructure for AI Agent Evaluation},
+author =    {Sayash Kapoor and Benedikt Stroebl and Peter Kirgis and Nitya Nadgir and Zachary S Siegel and Boyi Wei and Tianci Xue and Ziru Chen and Felix Chen and Saiteja Utpala and Franck Ndzomga and Dheeraj Oruganty and Sophie Luskin and Kangheng Liu and Botao Yu and Amit Arora and Dongyoon Hahm and Harsh Trivedi and Huan Sun and Juyong Lee and Tengjun Jin and Yifan Mai and Yifei Zhou and Yuxuan Zhu and Rishi Bommasani and Daniel Kang and Dawn Song and Peter Henderson and Yu Su and Percy Liang and Arvind Narayanan},
+booktitle = {The Fourteenth International Conference on Learning Representations (ICLR)},
+url =       {https://arxiv.org/pdf/2510.11977},
+year =      {2026}}</pre>
                         <button onclick="copyBibtex()" class="absolute top-2 right-2 p-2 text-gray-500 hover:text-gray-700 rounded-md transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -752,11 +753,12 @@ year =         {2025}}</pre>
 {% block scripts %}
 <script>
     function copyBibtex() {
-        const bibtex = `@Misc{hal,
-title =        {Holistic Agent Leaderboard: The Missing Infrastructure for AI Agent Evaluation},
-author =       {Sayash Kapoor and Benedikt Stroebl and Peter Kirgis and Nitya Nadgir and Zachary S Siegel and Boyi Wei and Tianci Xue and Ziru Chen and Felix Chen and Saiteja Utpala and Franck Ndzomga and Dheeraj Oruganty and Sophie Luskin and Kangheng Liu and Botao Yu and Amit Arora and Dongyoon Hahm and Harsh Trivedi and Huan Sun and Juyong Lee and Tengjun Jin and Yifan Mai and Yifei Zhou and Yuxuan Zhu and Rishi Bommasani and Daniel Kang and Dawn Song and Peter Henderson and Yu Su and Percy Liang and Arvind Narayanan},
-howpublished = {\\url{https://github.com/princeton-pli/hal-harness}},
-year =         {2025}}`;
+        const bibtex = `@inproceedings{hal,
+title =     {Holistic Agent Leaderboard: The Missing Infrastructure for AI Agent Evaluation},
+author =    {Sayash Kapoor and Benedikt Stroebl and Peter Kirgis and Nitya Nadgir and Zachary S Siegel and Boyi Wei and Tianci Xue and Ziru Chen and Felix Chen and Saiteja Utpala and Franck Ndzomga and Dheeraj Oruganty and Sophie Luskin and Kangheng Liu and Botao Yu and Amit Arora and Dongyoon Hahm and Harsh Trivedi and Huan Sun and Juyong Lee and Tengjun Jin and Yifan Mai and Yifei Zhou and Yuxuan Zhu and Rishi Bommasani and Daniel Kang and Dawn Song and Peter Henderson and Yu Su and Percy Liang and Arvind Narayanan},
+booktitle = {The Fourteenth International Conference on Learning Representations (ICLR)},
+url =       {https://arxiv.org/pdf/2510.11977},
+year =      {2026}}`;
         navigator.clipboard.writeText(bibtex).then(() => {
             const button = document.querySelector('button[onclick="copyBibtex()"]');
             button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
