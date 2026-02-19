@@ -6,7 +6,7 @@
 <div class="hero-section mb-5">
     <div class="row align-items-center">
         <div class="col-lg-7">
-            <h1 class="hero-title">Accuracy is not enough.</h1>
+            <h1 class="hero-title">AI Agent Reliability Tracker</h1>
             <p class="hero-subtitle">
                 Rising accuracy scores suggest rapid progress, but agents still fail unpredictably in practice.
                 A single success metric obscures whether agents behave <strong>consistently</strong> across runs,
@@ -19,7 +19,7 @@
         </div>
         <div class="col-lg-5">
             <div class="hero-sidebar">
-                <div class="d-flex gap-3 justify-content-center mb-3">
+                <div class="d-flex gap-3 justify-content-center mb-3 flex-wrap">
                     <div class="hero-stat-card">
                         <div class="hero-stat-number">{{ stats.num_agents }}</div>
                         <div class="hero-stat-label">Agents Evaluated</div>
@@ -28,9 +28,16 @@
                         <div class="hero-stat-number">{{ stats.num_benchmarks }}</div>
                         <div class="hero-stat-label">Benchmarks</div>
                     </div>
-                    <div class="hero-stat-card">
-                        <div class="hero-stat-number">4</div>
-                        <div class="hero-stat-label">Reliability Dimensions</div>
+                    <div class="hero-stat-card hero-stat-pill">
+                        <div class="hero-pill-half">
+                            <div class="hero-stat-number">4</div>
+                            <div class="hero-stat-label">Dimensions</div>
+                        </div>
+                        <div class="hero-pill-divider"></div>
+                        <div class="hero-pill-half">
+                            <div class="hero-stat-number">12</div>
+                            <div class="hero-stat-label">Metrics</div>
+                        </div>
                     </div>
                 </div>
                 <div class="d-flex gap-2 justify-content-center flex-wrap">
@@ -79,10 +86,10 @@
                                 <th rowspan="2">#</th>
                                 <th rowspan="2" class="sortable" data-sort="display_name">Agent</th>
                                 <th rowspan="2" class="sortable" data-sort="accuracy">Acc</th>
+                                <th rowspan="2" class="leaderboard-dim-col sortable" data-sort="overall_reliability">Reliability</th>
                                 {% for dim in dimensions %}
                                 <th colspan="{{ leaderboard_dim_metrics[dim]|length + 1 }}" class="leaderboard-group-header"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }} <a tabindex="0" role="button" class="info-pop" data-bs-toggle="popover" data-bs-html="true" data-bs-content="{{ dim_tooltips[dim] }} &lt;a href='{{ url_for("reliability.methodology") }}#{{ dim_anchors[dim] }}'&gt;Definition &amp;rarr;&lt;/a&gt;"><i class="fa-solid fa-circle-info text-muted"></i></a></th>
                                 {% endfor %}
-                                <th rowspan="2" class="leaderboard-dim-col sortable" data-sort="overall_reliability">Overall</th>
                             </tr>
                             <tr class="leaderboard-sub-row">
                                 {% for dim in dimensions %}
@@ -97,8 +104,14 @@
                             {% for agent in leaderboard %}
                             <tr>
                                 <td>{{ loop.index }}</td>
-                                <td class="text-nowrap"><a href="{{ url_for('reliability.agent', name=agent.display_name) }}" class="text-decoration-none">{% set _pl = provider_logos.get(agent.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ agent.provider }}">{% endif %}{{ agent.display_name }}</a></td>
+                                <td class="text-nowrap"><a href="{{ url_for('reliability.agent', slug=agent.slug) }}" class="text-decoration-none">{% set _pl = provider_logos.get(agent.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ agent.provider }}">{% endif %}{{ agent.display_name }}</a></td>
                                 <td><span class="badge-metric">{{ "%.1f"|format((agent.accuracy or 0) * 100) }}%</span></td>
+                                <td class="leaderboard-dim-col">
+                                    {% set ov = agent.get("overall_reliability", None) %}
+                                    {% if ov is not none %}
+                                    <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
+                                    {% endif %}
+                                </td>
                                 {% for dim in dimensions %}
                                 <td class="leaderboard-dim-col">
                                     {% set val = agent.get("dim_" ~ dim, None) %}
@@ -115,12 +128,6 @@
                                 </td>
                                 {% endfor %}
                                 {% endfor %}
-                                <td class="leaderboard-dim-col">
-                                    {% set ov = agent.get("overall_reliability", None) %}
-                                    {% if ov is not none %}
-                                    <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
-                                    {% endif %}
-                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -200,6 +207,31 @@
     </div>
 </div>
 {% endif %}
+
+<!-- About -->
+<div id="about" class="mt-5 mb-4">
+    <h2 class="mb-4" style="font-family: 'Source Serif 4', Georgia, serif; font-weight: 700;">About</h2>
+    <div class="card">
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <h6 class="text-uppercase text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 0.05em;">Team</h6>
+                    <p class="mb-1"><strong>Stephan Rabanser, Sayash Kapoor, Peter Kirgis, Kangheng Liu, Saiteja Utpala, Arvind Narayanan</strong></p>
+                    <p class="mb-3"><a href="https://sage.cs.princeton.edu" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary" style="font-weight: 600;"><i class="fa-solid fa-arrow-up-right-from-square me-1"></i>SAgE Group</a> <span class="text-muted">&mdash; <a href="https://www.princeton.edu" target="_blank" rel="noopener" class="text-muted">Princeton University</a></span></p>
+                    <p class="mb-0" style="font-size: 0.9rem;">
+                        Contact: <a href="mailto:rabanser@princeton.edu">rabanser@princeton.edu</a>,
+                        <a href="mailto:sayashk@princeton.edu">sayashk@princeton.edu</a>,
+                        <a href="mailto:arvindn@princeton.edu">arvindn@princeton.edu</a>
+                    </p>
+                </div>
+                <div class="col-lg-6">
+                    <h6 class="text-uppercase text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 0.05em;">Acknowledgements</h6>
+                    <p class="mb-0" style="font-size: 0.9rem;">This work was supported by Princeton Language and Intelligence (PLI), the Princeton AI Lab, the Princeton Catalysis Initiative, Schmidt Sciences, and Coefficient Giving. We thank OpenAI and Google for providing compute credits to support our experimentation.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -239,8 +271,8 @@
         return '<span class="badge-metric" style="background:' + metricColor(val) + '">' + val.toFixed(2) + '</span>';
     }
 
-    function agentLink(name) {
-        return '{{ url_for("reliability.agent", name="__NAME__") }}'.replace('__NAME__', encodeURIComponent(name));
+    function agentLink(slug) {
+        return '{{ url_for("reliability.agent", slug="__SLUG__") }}'.replace('__SLUG__', encodeURIComponent(slug));
     }
 
     function renderLeaderboard(agents) {
@@ -255,10 +287,17 @@
             if (pl) {
                 logoHtml = '<img src="' + pl[0] + '" class="provider-logo' + (pl[1] ? ' logo-invert' : '') + '" alt="' + (a.provider||'') + '">';
             }
-            html += '<td class="text-nowrap"><a href="' + agentLink(a.display_name) + '" class="text-decoration-none">' + logoHtml + a.display_name + '</a></td>';
+            html += '<td class="text-nowrap"><a href="' + agentLink(a.slug) + '" class="text-decoration-none">' + logoHtml + a.display_name + '</a></td>';
             // Accuracy
             var acc = a.accuracy != null ? (a.accuracy * 100).toFixed(1) + '%' : '\u2014';
             html += '<td><span class="badge-metric">' + acc + '</span></td>';
+            // Overall
+            var ov = a.overall_reliability;
+            if (ov != null) {
+                html += '<td class="leaderboard-dim-col"><span class="badge-metric badge-overall">' + ov.toFixed(2) + '</span></td>';
+            } else {
+                html += '<td class="leaderboard-dim-col"></td>';
+            }
             // Dimensions
             _dims.forEach(function(dim) {
                 // Dim average
@@ -269,13 +308,6 @@
                     html += '<td>' + badge(a[m]) + '</td>';
                 });
             });
-            // Overall
-            var ov = a.overall_reliability;
-            if (ov != null) {
-                html += '<td class="leaderboard-dim-col"><span class="badge-metric badge-overall">' + ov.toFixed(2) + '</span></td>';
-            } else {
-                html += '<td class="leaderboard-dim-col"></td>';
-            }
             html += '</tr>';
         });
         tbody.innerHTML = html;

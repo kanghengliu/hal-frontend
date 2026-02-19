@@ -157,19 +157,25 @@
                         <th class="sortable" data-sort="_rank">#</th>
                         <th class="sortable" data-sort="display_name">Agent</th>
                         <th class="sortable" data-sort="accuracy">Acc</th>
+                        <th class="leaderboard-dim-col sortable" data-sort="overall_reliability">Reliability</th>
                         <th class="leaderboard-dim-col sortable" data-sort="dim_{{ dimension }}">{{ dimension }} Agg</th>
                         {% for m in leaderboard_dim_metrics[dimension] %}
                         <th class="sortable" data-sort="{{ m }}"><span title="{{ metric_tip.get(m, m) }}">{{ metric_short.get(m, m) }}</span></th>
                         {% endfor %}
-                        <th class="leaderboard-dim-col sortable" data-sort="overall_reliability">Overall</th>
                     </tr>
                 </thead>
                 <tbody id="dimLeaderboardBody">
                     {% for a in leaderboard_agents %}
                     <tr>
                         <td>{{ loop.index }}</td>
-                        <td class="text-nowrap"><a href="{{ url_for('reliability.agent_benchmark', agent_name=a.display_name, bench=benchmark) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
+                        <td class="text-nowrap"><a href="{{ url_for('reliability.agent_benchmark', slug=a.slug, bench=benchmark) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
                         <td><span class="badge-metric">{{ "%.1f"|format((a.accuracy or 0) * 100) }}%</span></td>
+                        <td class="leaderboard-dim-col">
+                            {% set ov = a.get("overall_reliability", None) %}
+                            {% if ov is not none %}
+                            <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
+                            {% endif %}
+                        </td>
                         <td class="leaderboard-dim-col">
                             {% set val = a.get("dim_" ~ dimension, None) %}
                             {% if val is not none %}
@@ -184,12 +190,6 @@
                             {% else %}<span class="text-muted">—</span>{% endif %}
                         </td>
                         {% endfor %}
-                        <td class="leaderboard-dim-col">
-                            {% set ov = a.get("overall_reliability", None) %}
-                            {% if ov is not none %}
-                            <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
-                            {% endif %}
-                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -929,9 +929,9 @@ window.addEventListener('theme-changed', function() {
         return '<span class="badge-metric" style="background:' + metricColor(val) + '">' + val.toFixed(2) + '</span>';
     }
 
-    function agentLink(agentName) {
-        return '{{ url_for("reliability.agent_benchmark", agent_name="__AGENT__", bench="__BENCH__") }}'
-            .replace('__AGENT__', encodeURIComponent(agentName))
+    function agentLink(slug) {
+        return '{{ url_for("reliability.agent_benchmark", slug="__SLUG__", bench="__BENCH__") }}'
+            .replace('__SLUG__', encodeURIComponent(slug))
             .replace('__BENCH__', encodeURIComponent(_benchName));
     }
 
@@ -946,19 +946,19 @@ window.addEventListener('theme-changed', function() {
             if (pl) {
                 logoHtml = '<img src="' + pl[0] + '" class="provider-logo' + (pl[1] ? ' logo-invert' : '') + '" alt="' + (a.provider||'') + '">';
             }
-            html += '<td class="text-nowrap"><a href="' + agentLink(a.display_name) + '" class="text-decoration-none">' + logoHtml + a.display_name + '</a></td>';
+            html += '<td class="text-nowrap"><a href="' + agentLink(a.slug) + '" class="text-decoration-none">' + logoHtml + a.display_name + '</a></td>';
             var acc = a.accuracy != null ? (a.accuracy * 100).toFixed(1) + '%' : '\u2014';
             html += '<td><span class="badge-metric">' + acc + '</span></td>';
-            html += '<td class="leaderboard-dim-col">' + badge(a['dim_' + _dim]) + '</td>';
-            _dimMetrics.forEach(function(m) {
-                html += '<td>' + badge(a[m]) + '</td>';
-            });
             var ov = a.overall_reliability;
             if (ov != null) {
                 html += '<td class="leaderboard-dim-col"><span class="badge-metric badge-overall">' + ov.toFixed(2) + '</span></td>';
             } else {
                 html += '<td class="leaderboard-dim-col"></td>';
             }
+            html += '<td class="leaderboard-dim-col">' + badge(a['dim_' + _dim]) + '</td>';
+            _dimMetrics.forEach(function(m) {
+                html += '<td>' + badge(a[m]) + '</td>';
+            });
             html += '</tr>';
         });
         tbody.innerHTML = html;

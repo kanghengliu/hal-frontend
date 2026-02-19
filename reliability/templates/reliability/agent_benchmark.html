@@ -6,7 +6,7 @@
     <ol class="breadcrumb small">
         <li class="breadcrumb-item"><a href="{{ url_for('reliability.index') }}">Overview</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('reliability.benchmark', name=benchmark) }}">{{ bench_display(benchmark) }}</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('reliability.agent', name=agent_name) }}">{{ agent_name }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('reliability.agent', slug=agent_slug) }}">{{ agent_name }}</a></li>
         <li class="breadcrumb-item active">Detail</li>
     </ol>
 </nav>

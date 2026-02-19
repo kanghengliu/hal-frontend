@@ -23,7 +23,7 @@
                 <div class="card">
                     <div class="card-header">
                         <a href="{{ url_for('reliability.benchmark', name=rec.benchmark) }}" class="text-decoration-none">{{ bench_display(rec.benchmark) }}</a>
-                        <a href="{{ url_for('reliability.agent_benchmark', agent_name=name, bench=rec.benchmark) }}" class="btn btn-outline-primary btn-sm float-end">Detail &rarr;</a>
+                        <a href="{{ url_for('reliability.agent_benchmark', slug=agent_slug, bench=rec.benchmark) }}" class="btn btn-outline-primary btn-sm float-end">Detail &rarr;</a>
                     </div>
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-2">
@@ -41,7 +41,7 @@
                         {% endfor %}
                         <hr class="my-2">
                         <div class="d-flex justify-content-between">
-                            <span class="fw-semibold">Overall</span>
+                            <span class="fw-semibold">Reliability</span>
                             <span class="badge-metric badge-overall">{{ "%.2f"|format(rec.overall_reliability or 0) }}</span>
                         </div>
                     </div>

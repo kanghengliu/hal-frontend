@@ -226,6 +226,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var benchContext = window._trendBenchContext || null;
     var benchDisplayToRaw = window._benchDisplayToRaw || {};
+    function _isClickable() {
+        if (benchContext) return true;
+        if (benchSel) {
+            var selVal = benchSel.value;
+            if (selVal && selVal !== 'All Benchmarks') return true;
+        }
+        return false;
+    }
     function onPointClick(evt, elements, chart) {
         if (!elements.length) return;
         var el = elements[0];
@@ -236,14 +244,14 @@ document.addEventListener('DOMContentLoaded', function() {
             var selVal = benchSel.value;
             if (selVal && selVal !== 'All Benchmarks') bench = benchDisplayToRaw[selVal] || null;
         }
-        if (bench) {
-            window.location.href = '{{ url_for("reliability.agent_benchmark", agent_name="__AGENT__", bench="__BENCH__") }}'
-                .replace('__AGENT__', encodeURIComponent(pt.label))
+        if (bench && pt.slug) {
+            window.location.href = '{{ url_for("reliability.agent_benchmark", slug="__SLUG__", bench="__BENCH__") }}'
+                .replace('__SLUG__', encodeURIComponent(pt.slug))
                 .replace('__BENCH__', encodeURIComponent(bench));
-        } else {
-            window.location.href = '{{ url_for("reliability.agent", name="__AGENT__") }}'
-                .replace('__AGENT__', encodeURIComponent(pt.label));
         }
+    }
+    function onPointHover(evt, els) {
+        evt.native.target.style.cursor = (els.length && _isClickable()) ? 'pointer' : 'default';
     }
 
     function statsHtml(data, isDate) {
@@ -275,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     animation: false,
                     clip: false,
                     onClick: onPointClick,
-                    onHover: function(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                    onHover: onPointHover,
                     scales: {
                         x: { type: 'time', time: { unit: 'month', tooltipFormat: 'yyyy-MM' },
                              title: { display: true, text: 'Release Date', color: cc.label },
@@ -309,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     animation: false,
                     clip: false,
                     onClick: onPointClick,
-                    onHover: function(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                    onHover: onPointHover,
                     scales: {
                         x: { type: 'time', time: { unit: 'month', tooltipFormat: 'yyyy-MM' },
                              title: { display: true, text: 'Release Date', color: cc.label },
@@ -343,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     animation: false,
                     clip: false,
                     onClick: onPointClick,
-                    onHover: function(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                    onHover: onPointHover,
                     scales: {
                         x: { min: -0.02, max: 1.02, title: { display: true, text: 'Accuracy', color: cc.label },
                              ticks: { color: cc.tick }, grid: { color: cc.grid } },

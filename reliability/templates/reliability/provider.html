@@ -25,18 +25,19 @@
                                 <th>Agent</th>
                                 <th>Benchmark</th>
                                 <th>Acc</th>
+                                <th>Reliability</th>
                                 {% for dim in dimensions %}
                                 <th>{{ dim }}</th>
                                 {% endfor %}
-                                <th>Overall</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for a in agents %}
                             <tr>
-                                <td><a href="{{ url_for('reliability.agent', name=a.display_name) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
+                                <td><a href="{{ url_for('reliability.agent', slug=a.slug) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
                                 <td><a href="{{ url_for('reliability.benchmark', name=a.benchmark) }}" class="text-decoration-none">{{ bench_display(a.benchmark) }}</a></td>
                                 <td>{{ "%.1f"|format((a.accuracy or 0) * 100) }}%</td>
+                                <td><span class="badge-metric badge-overall">{{ "%.2f"|format(a.overall_reliability or 0) }}</span></td>
                                 {% for dim in dimensions %}
                                 <td>
                                     {% set val = a.get("dim_" ~ dim, None) %}
@@ -45,7 +46,6 @@
                                     {% else %}<span class="text-muted">—</span>{% endif %}
                                 </td>
                                 {% endfor %}
-                                <td><span class="badge-metric badge-overall">{{ "%.2f"|format(a.overall_reliability or 0) }}</span></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -93,10 +93,10 @@
                             <th rowspan="2">#</th>
                             <th rowspan="2">Agent</th>
                             <th rowspan="2">Acc</th>
+                            <th rowspan="2" class="leaderboard-dim-col">Reliability</th>
                             {% for dim in dimensions %}
                             <th colspan="{{ leaderboard_dim_metrics[dim]|length + 1 }}" class="leaderboard-group-header"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }}</th>
                             {% endfor %}
-                            <th rowspan="2" class="leaderboard-dim-col">Overall</th>
                         </tr>
                         <tr class="leaderboard-sub-row">
                             {% for dim in dimensions %}
@@ -111,8 +111,14 @@
                         {% for a in bench_agents %}
                         <tr>
                             <td>{{ loop.index }}</td>
-                            <td class="text-nowrap"><a href="{{ url_for('reliability.agent', name=a.display_name) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
+                            <td class="text-nowrap"><a href="{{ url_for('reliability.agent', slug=a.slug) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
                             <td><span class="badge-metric">{{ "%.1f"|format((a.accuracy or 0) * 100) }}%</span></td>
+                            <td class="leaderboard-dim-col">
+                                {% set ov = a.get("overall_reliability", None) %}
+                                {% if ov is not none %}
+                                <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
+                                {% endif %}
+                            </td>
                             {% for dim in dimensions %}
                             <td class="leaderboard-dim-col">
                                 {% set val = a.get("dim_" ~ dim, None) %}
@@ -129,12 +135,6 @@
                             </td>
                             {% endfor %}
                             {% endfor %}
-                            <td class="leaderboard-dim-col">
-                                {% set ov = a.get("overall_reliability", None) %}
-                                {% if ov is not none %}
-                                <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
-                                {% endif %}
-                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

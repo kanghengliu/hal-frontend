@@ -10,13 +10,13 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header"><h6 class="mb-0">Accuracy</h6></div>
-            <div class="card-body"><canvas id="cmp_Accuracy"></canvas></div>
+            <div class="card-body"><div id="cmpWrap_Accuracy" style="position:relative; width:100%;"><canvas id="cmp_Accuracy"></canvas></div></div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header"><h6 class="mb-0">Overall Reliability</h6></div>
-            <div class="card-body"><canvas id="cmp_Overall_Reliability"></canvas></div>
+            <div class="card-body"><div id="cmpWrap_Overall_Reliability" style="position:relative; width:100%;"><canvas id="cmp_Overall_Reliability"></canvas></div></div>
         </div>
     </div>
 </div>
@@ -27,7 +27,7 @@
     <div class="col-md-6 col-lg-6">
         <div class="card h-100">
             <div class="card-header"><h6 class="mb-0"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }}</h6></div>
-            <div class="card-body"><canvas id="cmp_{{ dim }}"></canvas></div>
+            <div class="card-body"><div id="cmpWrap_{{ dim }}" style="position:relative; width:100%;"><canvas id="cmp_{{ dim }}"></canvas></div></div>
         </div>
     </div>
     {% endfor %}
@@ -58,7 +58,7 @@
                         {% for dim, cols in dim_metrics.items() %}
                         <th colspan="{{ cols|length * 2 }}" class="leaderboard-group-header"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }}</th>
                         {% endfor %}
-                        <th colspan="2" class="leaderboard-group-header">Overall</th>
+                        <th colspan="2" class="leaderboard-group-header">Reliability</th>
                     </tr>
                     <tr class="leaderboard-sub-row">
                         <th colspan="2" class="leaderboard-dim-col"></th>
@@ -127,6 +127,14 @@ chartKeys.forEach(key => {
     if (!d) return;
     const el = document.getElementById(canvasIds[key]);
     if (!el) return;
+    var wrapId = 'cmpWrap_' + key.replace(/ /g, '_');
+    var wrap = document.getElementById(wrapId);
+    if (wrap) {
+        var nBars = d.labels.length;
+        var barH = window.innerWidth < 768 ? 36 : 24;
+        var minH = Math.max(200, nBars * barH + 40);
+        wrap.style.minHeight = minH + 'px';
+    }
     var chart = new Chart(el, {
         type: 'bar',
         data: {
@@ -148,6 +156,7 @@ chartKeys.forEach(key => {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             indexAxis: 'y',
             scales: {
                 x: { min: 0, max: 1, ticks: { color: getChartColors().tick }, grid: { color: getChartColors().grid } },

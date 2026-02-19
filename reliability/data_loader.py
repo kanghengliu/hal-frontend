@@ -110,6 +110,15 @@ _DISPLAY_NAMES = {
 }
 
 
+import re
+
+def _slugify(name: str) -> str:
+    """Convert a display name to a URL-safe slug."""
+    s = name.lower().strip()
+    s = re.sub(r'[^a-z0-9]+', '-', s)
+    return s.strip('-')
+
+
 def _clean_agent_name(raw: str) -> str:
     """Make agent names human-readable."""
     # Try explicit mapping by matching the model suffix
@@ -137,6 +146,7 @@ def load_benchmarks() -> dict[str, pd.DataFrame]:
             df = pd.read_csv(csv_path)
             df["provider"] = df["agent"].apply(_guess_provider)
             df["display_name"] = df["agent"].apply(_clean_agent_name)
+            df["slug"] = df["display_name"].apply(_slugify)
             df["release_date"] = df["agent"].map(
                 lambda x: MODEL_METADATA.get(x, {}).get("date", None)
             )
@@ -182,9 +192,10 @@ def agent_summary(all_agents: pd.DataFrame) -> pd.DataFrame:
     """One row per unique display_name with averaged metrics."""
     num_cols = all_agents.select_dtypes(include=[np.number]).columns.tolist()
     summary = all_agents.groupby("display_name")[num_cols].mean().reset_index().sort_values("overall_reliability", ascending=False)
-    # Re-attach provider (take first occurrence per display_name)
-    prov_map = all_agents.drop_duplicates("display_name").set_index("display_name")["provider"]
-    summary["provider"] = summary["display_name"].map(prov_map)
+    # Re-attach provider and slug (take first occurrence per display_name)
+    first = all_agents.drop_duplicates("display_name").set_index("display_name")
+    summary["provider"] = summary["display_name"].map(first["provider"])
+    summary["slug"] = summary["display_name"].map(first["slug"])
     return summary
 
 
@@ -222,6 +233,7 @@ def compute_trend_data(df: pd.DataFrame, y_col: str) -> dict | None:
             "x": row["release_date"],
             "y": float(row[y_col]) if not np.isnan(row[y_col]) else None,
             "label": row["display_name"],
+            "slug": row.get("slug", ""),
             "provider": row["provider"],
         }
         if "benchmark" in row.index:
@@ -258,6 +270,7 @@ def compute_accuracy_scatter(df: pd.DataFrame, y_col: str) -> dict | None:
             "x": float(row["accuracy"]),
             "y": float(row[y_col]) if not np.isnan(row[y_col]) else None,
             "label": row["display_name"],
+            "slug": row.get("slug", ""),
             "provider": row["provider"],
         }
         if "benchmark" in row.index:

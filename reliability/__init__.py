@@ -207,6 +207,14 @@ _LANDING_EXCLUDE = {"taubench_airline_original"}
 LANDING_AGENTS = ALL_AGENTS[~ALL_AGENTS["benchmark"].isin(_LANDING_EXCLUDE)]
 LANDING_SUMMARY = agent_summary(LANDING_AGENTS)
 
+# Averaged version for "All Benchmarks" trend charts (one dot per model)
+LANDING_AVERAGED = LANDING_SUMMARY.copy()
+_date_map = LANDING_AGENTS.drop_duplicates("display_name").set_index("display_name")["release_date"]
+LANDING_AVERAGED["release_date"] = LANDING_AVERAGED["display_name"].map(_date_map)
+
+# Slug → display_name lookup (populated from all agents)
+SLUG_TO_NAME = dict(zip(ALL_AGENTS["slug"], ALL_AGENTS["display_name"]))
+
 
 @reliability_bp.context_processor
 def inject_globals():
@@ -292,7 +300,7 @@ def index():
                 f"({most_reliable['display_name']}) ranks #{rel_acc_rank} in accuracy."
             )
 
-    trend_charts = _build_trend_charts(LANDING_AGENTS)
+    trend_charts = _build_trend_charts(LANDING_AVERAGED)
     trend_by_bench = {"All Benchmarks": trend_charts}
     for bname, bdf in BENCHMARKS.items():
         if bname in _LANDING_EXCLUDE:
@@ -356,8 +364,11 @@ def benchmark(name):
     )
 
 
-@reliability_bp.route("/agent/<name>/")
-def agent(name):
+@reliability_bp.route("/agent/<slug>/")
+def agent(slug):
+    name = SLUG_TO_NAME.get(slug)
+    if name is None:
+        abort(404)
     rows = ALL_AGENTS[ALL_AGENTS["display_name"] == name]
     if rows.empty:
         abort(404)
@@ -382,6 +393,7 @@ def agent(name):
         detail_metrics[dim] = cols
     return render_template("reliability/agent.html",
         name=name,
+        agent_slug=slug,
         agent_data=agent_data,
         radar_data=json.dumps(radar_data, default=_safe_json),
         dimensions=dimensions,
@@ -668,8 +680,11 @@ def dimension_detail(bench, dim):
     )
 
 
-@reliability_bp.route("/agent/<agent_name>/benchmark/<bench>/")
-def agent_benchmark(agent_name, bench):
+@reliability_bp.route("/agent/<slug>/benchmark/<bench>/")
+def agent_benchmark(slug, bench):
+    agent_name = SLUG_TO_NAME.get(slug)
+    if agent_name is None:
+        abort(404)
     if bench not in BENCHMARKS:
         abort(404)
     df = BENCHMARKS[bench]
@@ -699,6 +714,7 @@ def agent_benchmark(agent_name, bench):
     safe_detail = json.loads(json.dumps(detail, default=_safe_json))
     return render_template("reliability/agent_benchmark.html",
         agent_name=agent_name,
+        agent_slug=slug,
         benchmark=bench,
         provider=row["provider"],
         metrics=metrics,
