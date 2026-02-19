@@ -6,4 +6,4 @@ services:
     ports:
       - "8742:8742"
     volumes:
-      - ./data:/app/reliability/data:rw
+      - ./reliability/data:/app/reliability/data:rw
