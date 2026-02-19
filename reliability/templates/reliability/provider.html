@@ -1,0 +1,242 @@
+{% extends "reliability/base.html" %}
+{% block title %}{{ provider_display(name) }} — Provider Detail{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Provider: <span style="color: {{ provider_color }}">{% set _pl = provider_logos.get(name) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ name }}">{% endif %}{{ provider_display(name) }}</span></h2>
+
+{# ── Overview: Radar + Summary Cards ── #}
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0">Model Comparison (Avg. across Benchmarks)</h5></div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <canvas id="providerRadar"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0">Overall Leaderboard</h5></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle small">
+                        <thead>
+                            <tr>
+                                <th>Agent</th>
+                                <th>Benchmark</th>
+                                <th>Acc</th>
+                                {% for dim in dimensions %}
+                                <th>{{ dim }}</th>
+                                {% endfor %}
+                                <th>Overall</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in agents %}
+                            <tr>
+                                <td><a href="{{ url_for('reliability.agent', name=a.display_name) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
+                                <td><a href="{{ url_for('reliability.benchmark', name=a.benchmark) }}" class="text-decoration-none">{{ bench_display(a.benchmark) }}</a></td>
+                                <td>{{ "%.1f"|format((a.accuracy or 0) * 100) }}%</td>
+                                {% for dim in dimensions %}
+                                <td>
+                                    {% set val = a.get("dim_" ~ dim, None) %}
+                                    {% if val is not none %}
+                                    <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                {% endfor %}
+                                <td><span class="badge-metric badge-overall">{{ "%.2f"|format(a.overall_reliability or 0) }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "reliability/trend_charts.html" %}
+
+{% set metric_short = {
+    'C_out': 'Outc', 'C_traj_d': 'Traj-D', 'C_traj_s': 'Traj-S', 'C_res': 'Res',
+    'P_cal': 'Cal', 'P_auroc': 'AUROC', 'P_brier': 'Brier',
+    'R_fault': 'Fault', 'R_struct': 'Struct', 'R_prompt': 'Prompt',
+    'S_harm': 'Harm', 'S_comp': 'Comp', 'S_safety': 'Safety'
+} %}
+{% set metric_tip = {
+    'C_out': 'Outcome consistency across runs', 'C_traj_d': 'Trajectory consistency (distributional)', 'C_traj_s': 'Trajectory consistency (sequential)', 'C_res': 'Resource usage consistency',
+    'P_cal': 'Confidence calibration', 'P_auroc': 'Confidence discrimination (AUROC)', 'P_brier': 'Brier score (inverted)',
+    'R_fault': 'Fault injection tolerance', 'R_struct': 'Structural perturbation robustness', 'R_prompt': 'Prompt rewording robustness',
+    'S_harm': 'Harm avoidance', 'S_comp': 'Constraint compliance', 'S_safety': 'Overall safety score'
+} %}
+<style>.bench-section-table tbody td { padding: .55rem .5rem; }</style>
+{# ── Per-Benchmark Sections ── #}
+{% for bench in bench_names %}
+{% set bench_agents = agents | selectattr("benchmark", "equalto", bench) | list %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><a href="{{ url_for('reliability.benchmark', name=bench) }}" class="text-decoration-none">{{ bench_display(bench) }}</a></h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-4">
+                <div id="barWrap_{{ bench }}" style="position:relative; width:100%;">
+                    <canvas id="bar_{{ bench }}"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="table-responsive">
+                <table class="table table-hover mb-0 small align-middle leaderboard-table bench-section-table">
+                    <thead>
+                        <tr class="leaderboard-group-row">
+                            <th rowspan="2">#</th>
+                            <th rowspan="2">Agent</th>
+                            <th rowspan="2">Acc</th>
+                            {% for dim in dimensions %}
+                            <th colspan="{{ leaderboard_dim_metrics[dim]|length + 1 }}" class="leaderboard-group-header"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }}</th>
+                            {% endfor %}
+                            <th rowspan="2" class="leaderboard-dim-col">Overall</th>
+                        </tr>
+                        <tr class="leaderboard-sub-row">
+                            {% for dim in dimensions %}
+                            <th class="leaderboard-dim-col">Agg</th>
+                            {% for m in leaderboard_dim_metrics[dim] %}
+                            <th><span title="{{ metric_tip.get(m, m) }}">{{ metric_short.get(m, m) }}</span></th>
+                            {% endfor %}
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in bench_agents %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td class="text-nowrap"><a href="{{ url_for('reliability.agent', name=a.display_name) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
+                            <td><span class="badge-metric">{{ "%.1f"|format((a.accuracy or 0) * 100) }}%</span></td>
+                            {% for dim in dimensions %}
+                            <td class="leaderboard-dim-col">
+                                {% set val = a.get("dim_" ~ dim, None) %}
+                                {% if val is not none %}
+                                <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                                {% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            {% for m in leaderboard_dim_metrics[dim] %}
+                            <td>
+                                {% set val = a.get(m, None) %}
+                                {% if val is not none %}
+                                <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                                {% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            {% endfor %}
+                            {% endfor %}
+                            <td class="leaderboard-dim-col">
+                                {% set ov = a.get("overall_reliability", None) %}
+                                {% if ov is not none %}
+                                <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const radarData = {{ radar_data | safe }};
+const agents = {{ agents | tojson }};
+const dimensions = {{ dimensions | tojson }};
+const benchNames = {{ bench_names | tojson }};
+const providerColor = {{ provider_color | tojson }};
+const COLORS = ["#2563eb","#dc2626","#059669","#d97706","#7c3aed","#0891b2","#be185d","#0d9488"];
+
+var allCharts = [];
+
+// Radar chart
+function makeOpts() {
+    var c = getChartColors();
+    return {
+        responsive: true,
+        scales: { r: { beginAtZero: true, max: 1, ticks: { stepSize: 0.2, display: false }, grid: { color: c.grid }, pointLabels: { color: c.label, font: { size: 13 } } } },
+        plugins: { legend: { position: 'bottom', labels: { color: c.label, padding: 15 } } }
+    };
+}
+var radar = new Chart(document.getElementById('providerRadar'), { type: 'radar', data: radarData, options: Object.assign(makeOpts(), {animation: false}) });
+animateOnScroll(radar, ANIM_GROW);
+allCharts.push(radar);
+
+// Per-benchmark dimension bar charts
+benchNames.forEach(function(bench) {
+    var el = document.getElementById('bar_' + bench);
+    if (!el) return;
+    var wrap = document.getElementById('barWrap_' + bench);
+    var ba = agents.filter(a => a.benchmark === bench);
+    var labels = ba.map(a => a.display_name.length > 20 ? a.display_name.slice(0,19)+'…' : a.display_name);
+    var datasets = dimensions.map((dim, di) => ({
+        label: dim,
+        data: ba.map(a => a['dim_' + dim]),
+        backgroundColor: COLORS[di % COLORS.length] + 'cc',
+        borderRadius: 3,
+    }));
+    var cc = getChartColors();
+    var ch = new Chart(el, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            layout: { padding: { left: 18 } },
+            scales: {
+                x: { min: 0, max: 1, ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                y: { ticks: { color: cc.label, font: { size: 11 } }, grid: { display: false } },
+            },
+            plugins: { legend: { labels: { color: cc.label } } },
+            animation: false
+        }
+    });
+    ch._providerList = ba.map(a => a.provider);
+    ch._wrap = wrap;
+    animateOnScroll(ch, ANIM_GROW);
+    allCharts.push(ch);
+});
+
+// Sync bar chart wrapper heights to their sibling tables
+function syncBarHeights() {
+    benchNames.forEach(function(bench) {
+        var wrap = document.getElementById('barWrap_' + bench);
+        if (!wrap) return;
+        var tableCol = wrap.closest('.row').querySelector('.col-lg-8');
+        if (!tableCol) return;
+        var h = tableCol.offsetHeight;
+        if (h > 0) wrap.style.height = h + 'px';
+    });
+}
+syncBarHeights();
+window.addEventListener('resize', syncBarHeights);
+
+window.addEventListener('theme-changed', function() {
+    var c = getChartColors();
+    allCharts.forEach(function(ch) {
+        if (ch.config.type === 'radar') {
+            ch.options = makeOpts();
+        } else {
+            Object.values(ch.options.scales || {}).forEach(function(s) {
+                if (s.ticks) s.ticks.color = c.tick;
+                if (s.grid) s.grid.color = c.grid;
+            });
+            if (ch.options.plugins && ch.options.plugins.legend && ch.options.plugins.legend.labels) {
+                ch.options.plugins.legend.labels.color = c.label;
+            }
+        }
+        ch.update();
+    });
+});
+</script>
+{% endblock %}

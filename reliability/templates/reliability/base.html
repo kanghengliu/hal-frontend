@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Reliability Dashboard{% endblock %}</title>
+    <meta name="description" content="HAL Reliability Evaluation: a multi-dimensional leaderboard measuring AI agent consistency, predictability, robustness, safety, and abstention — not just accuracy.">
+    <!-- OpenGraph -->
+    <meta property="og:title" content="HAL Reliability Evaluation">
+    <meta property="og:description" content="Accuracy isn't enough. We evaluate AI agents on reliability — consistency, predictability, robustness, safety, and self-awareness.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://hal-evals.com">
+    <meta property="og:image" content="https://hal-evals.com/static/og-card.png">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@halevals">
+    <meta name="twitter:title" content="HAL Reliability Evaluation">
+    <meta name="twitter:description" content="Accuracy isn't enough. We evaluate AI agents on reliability — consistency, predictability, robustness, safety, and self-awareness.">
+    <meta name="twitter:image" content="https://hal-evals.com/static/og-card.png">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('reliability.static', filename='favicon.svg') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700;8..60,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('reliability.static', filename='style.css') }}">
+    <script>
+        // Apply saved theme before paint to prevent flash
+        (function() {
+            var t = localStorage.getItem('hal-reliability-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg border-bottom sticky-top">
+        <div class="container-fluid" style="padding: 6px 18px;">
+            <a class="navbar-brand" href="{{ url_for('reliability.index') }}">
+                {% include 'reliability/logo.svg' %}
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navContent">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('reliability.index') }}">Overview</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('reliability.index') }}#findings">Findings</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('reliability.index') }}#recommendations">Recommendations</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('reliability.methodology') }}">Methodology</a></li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Benchmarks</a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% for b in benchmarks %}
+                            <li><a class="dropdown-item" href="{{ url_for('reliability.benchmark', name=b) }}">{{ bench_display(b) }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Providers</a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('reliability.provider', name='openai') }}">OpenAI</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reliability.provider', name='anthropic') }}">Anthropic</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reliability.provider', name='google') }}">Google</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#citeModal"><i class="fa-solid fa-quote-left me-1"></i>Cite</a></li>
+                    <li class="nav-item ms-3 d-none d-lg-flex align-items-center nav-partner-logos">
+                        <span class="nav-separator"></span>
+                        <a href="https://www.princeton.edu" target="_blank" rel="noopener">
+                            <img class="logo-dark"  src="{{ url_for('reliability.static', filename='princeton-dark.svg') }}" alt="Princeton University">
+                            <img class="logo-light" src="{{ url_for('reliability.static', filename='princeton-light.svg') }}" alt="Princeton University">
+                        </a>
+                        <a href="https://pli.princeton.edu" target="_blank" rel="noopener">
+                            <img class="logo-dark"  src="{{ url_for('reliability.static', filename='pli-dark-lg.svg') }}" alt="Princeton Language & Intelligence">
+                            <img class="logo-light" src="{{ url_for('reliability.static', filename='pli-light-stacked-lg.svg') }}" alt="Princeton Language & Intelligence">
+                        </a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <button class="theme-toggle" id="themeToggle" title="Toggle light/dark theme">
+                            <span class="logo-dark">&#9790;</span>
+                            <span class="logo-light">&#9788;</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid px-4 py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="text-center py-3 border-top mt-4">
+        <small class="text-muted">HAL Reliability Evaluation Dashboard &mdash; Built by the <a href="https://sage.cs.princeton.edu" target="_blank" rel="noopener">SAGE team</a> at <a href="https://www.princeton.edu" target="_blank" rel="noopener">Princeton University</a></small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Hover-persistent popovers: stay open while mouse is over trigger or popover
+        document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function(el) {
+            var pop = new bootstrap.Popover(el, {
+                container: 'body',
+                html: el.hasAttribute('data-bs-html'),
+                trigger: 'manual',
+                sanitize: false,
+            });
+            var hideTimeout;
+            function clearHide() { clearTimeout(hideTimeout); }
+            function show() { clearHide(); pop.show(); }
+            function scheduleHide() { hideTimeout = setTimeout(function() { pop.hide(); }, 200); }
+            el.addEventListener('mouseenter', show);
+            el.addEventListener('mouseleave', scheduleHide);
+            el.addEventListener('focusin', show);
+            el.addEventListener('focusout', scheduleHide);
+            // When popover DOM is inserted, attach hover listeners to the tip element
+            el.addEventListener('inserted.bs.popover', function() {
+                var tipId = el.getAttribute('aria-describedby');
+                var tip = tipId ? document.getElementById(tipId) : null;
+                if (!tip) return;
+                tip.addEventListener('mouseenter', clearHide);
+                tip.addEventListener('mouseleave', scheduleHide);
+            });
+        });
+
+        // Theme toggle logic
+        const toggle = document.getElementById('themeToggle');
+        function getTheme() { return document.documentElement.getAttribute('data-theme'); }
+        function setTheme(t) {
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.setAttribute('data-bs-theme', t);
+            localStorage.setItem('hal-reliability-theme', t);
+            // Dispatch event so chart pages can update colors
+            window.dispatchEvent(new CustomEvent('theme-changed', { detail: t }));
+        }
+        toggle.addEventListener('click', function() {
+            setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+        });
+
+        // Render charts at higher resolution for crisp display when zoomed
+        Chart.defaults.devicePixelRatio = window.devicePixelRatio * 2 || 4;
+        // Global chart font & style defaults
+        Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
+        Chart.defaults.font.size = 12;
+        Chart.defaults.font.weight = 400;
+        Chart.defaults.scale.grid = Object.assign(Chart.defaults.scale.grid || {}, { borderDash: [2, 3] });
+        Chart.defaults.elements.bar.borderRadius = 5;
+        Chart.defaults.elements.point.borderWidth = 1.5;
+        Chart.defaults.elements.point.borderColor = 'rgba(255,255,255,0.8)';
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(26,29,36,0.92)';
+        Chart.defaults.plugins.tooltip.titleFont = { family: "'DM Sans', system-ui, sans-serif", size: 12, weight: 600 };
+        Chart.defaults.plugins.tooltip.bodyFont = { family: "'DM Sans', system-ui, sans-serif", size: 11 };
+        Chart.defaults.plugins.tooltip.cornerRadius = 6;
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.borderColor = 'rgba(255,255,255,0.1)';
+        Chart.defaults.plugins.tooltip.borderWidth = 1;
+
+        // Two-phase legend toggle for bar charts:
+        //   Hide → shrink bar to axis, then reposition remaining bars
+        //   Show → reposition bars to make room, then grow new bar from axis
+        (function() {
+            var PHASE = 350;
+            var animCfg = { duration: PHASE, easing: 'easeInOutCubic' };
+            var busy = new WeakSet();
+
+            Chart.defaults.plugins.legend.onClick = function(e, legendItem, legend) {
+                var chart = legend.chart;
+                var idx = legendItem.datasetIndex;
+
+                // Non-bar charts: use default show/hide
+                if (chart.config.type !== 'bar') {
+                    if (chart.isDatasetVisible(idx)) { chart.hide(idx); legendItem.hidden = true; }
+                    else { chart.show(idx); legendItem.hidden = false; }
+                    return;
+                }
+
+                // Guard against clicks while animating
+                if (busy.has(chart)) return;
+                busy.add(chart);
+
+                var meta = chart.getDatasetMeta(idx);
+                var ds   = chart.data.datasets[idx];
+                var visible = chart.isDatasetVisible(idx);
+
+                if (visible) {
+                    // ── HIDE ──
+                    // Phase 1: shrink bars to zero
+                    var saved = ds.data.slice();
+                    ds.data = saved.map(function() { return 0; });
+                    chart.options.animation = animCfg;
+                    chart.update();
+                    // Phase 2: hide dataset, restore data, let others reposition
+                    setTimeout(function() {
+                        ds.data = saved;
+                        meta.hidden = true;
+                        legendItem.hidden = true;
+                        chart.options.animation = animCfg;
+                        chart.update();
+                        setTimeout(function() { busy.delete(chart); }, PHASE);
+                    }, PHASE);
+                } else {
+                    // ── SHOW ──
+                    var saved = ds.data.slice();
+                    ds.data = saved.map(function() { return 0; });
+                    // Silently update parsed state to zeros while still hidden
+                    // so Chart.js doesn't animate FROM old full values
+                    chart.update('none');
+                    // Phase 1: unhide with zero-size bars (others slide to make room)
+                    meta.hidden = false;
+                    legendItem.hidden = false;
+                    chart.options.animation = animCfg;
+                    chart.update();
+                    // Phase 2: grow bars from axis
+                    setTimeout(function() {
+                        ds.data = saved;
+                        chart.options.animation = animCfg;
+                        chart.update();
+                        setTimeout(function() { busy.delete(chart); }, PHASE);
+                    }, PHASE);
+                }
+            };
+        })();
+
+        // Fade legend items for hidden datasets
+        (function() {
+            var orig = Chart.defaults.plugins.legend.labels.generateLabels;
+            function hexToRgba(hex, a) {
+                var r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
+                return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+            }
+            function fadeColor(c, a) {
+                if (!c) return c;
+                if (c.charAt(0) === '#') return hexToRgba(c, a);
+                if (c.indexOf('rgba') === 0) return c.replace(/,\s*[\d.]+\)$/, ',' + a + ')');
+                if (c.indexOf('rgb(') === 0) return c.replace('rgb(', 'rgba(').replace(')', ',' + a + ')');
+                return c;
+            }
+            Chart.defaults.plugins.legend.labels.generateLabels = function(chart) {
+                var items = orig.call(this, chart);
+                items.forEach(function(item) {
+                    if (item.hidden) {
+                        item.fillStyle = fadeColor(item.fillStyle, 0.25);
+                        item.strokeStyle = fadeColor(item.strokeStyle, 0.25);
+                        item.fontColor = fadeColor(getChartColors().label, 0.35);
+                        item.hidden = false; // suppress strikethrough; visibility controlled by meta.hidden
+                    }
+                });
+                return items;
+            };
+        })();
+
+        // Provider logo images for Chart.js tick labels
+        window._providerLogoMap = { openai: '{{ url_for("reliability.static", filename="openai.svg") }}', anthropic: '{{ url_for("reliability.static", filename="anthropic.svg") }}', google: '{{ url_for("reliability.static", filename="gemini.svg") }}' };
+        window._logoImgCache = {};
+        (function() {
+            Object.keys(window._providerLogoMap).forEach(function(p) {
+                var img = new Image();
+                img.src = window._providerLogoMap[p];
+                window._logoImgCache[p] = img;
+            });
+        })();
+        // Plugin: draw provider logos next to y-axis labels on horizontal bar charts
+        // Attach chart._providerList = ['openai','anthropic',...] to enable
+        Chart.register({
+            id: 'yAxisLogos',
+            afterDraw: function(chart) {
+                var providers = chart._providerList;
+                if (!providers || !providers.length) return;
+                var yScale = chart.scales.y;
+                if (!yScale) return;
+                var ctx = chart.ctx;
+                var size = 14;
+                yScale.ticks.forEach(function(tick, i) {
+                    var prov = providers[i];
+                    var img = window._logoImgCache[prov];
+                    if (!img || !img.complete) return;
+                    var yPos = yScale.getPixelForTick(i);
+                    var xPos = yScale.left - size - 4;
+                    ctx.drawImage(img, xPos, yPos - size / 2, size, size);
+                });
+            }
+        });
+
+        // Helper for chart pages to get current theme colors
+        window.getChartColors = function() {
+            var s = getComputedStyle(document.documentElement);
+            return {
+                grid: s.getPropertyValue('--chart-grid').trim(),
+                tick: s.getPropertyValue('--chart-tick').trim(),
+                label: s.getPropertyValue('--chart-label').trim(),
+            };
+        };
+
+        // Scroll-triggered animation: create chart with animation:false,
+        // then call animateOnScroll(chart, anim) to play animation when visible.
+        window.ANIM_GROW = { duration: 1200, easing: 'easeInOutCubic' };
+        // Left-to-right reveal plugin: clips chart area progressively
+        window._ltrRevealCharts = new Set();
+        Chart.register({
+            id: 'ltrReveal',
+            beforeDatasetsDraw: function(chart) {
+                if (!window._ltrRevealCharts.has(chart)) return;
+                var p = chart._ltrProgress;
+                if (p == null || p >= 1) return;
+                var area = chart.chartArea;
+                var pad = 10; // extra padding so edge points aren't clipped
+                var ctx = chart.ctx;
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(area.left - pad, area.top - pad, (area.right - area.left + 2 * pad) * p, area.bottom - area.top + 2 * pad);
+                ctx.clip();
+            },
+            afterDatasetsDraw: function(chart) {
+                if (!window._ltrRevealCharts.has(chart)) return;
+                var p = chart._ltrProgress;
+                if (p == null || p >= 1) return;
+                chart.ctx.restore();
+            }
+        });
+        window.ANIM_LTR = '_ltr_reveal_';
+        function _runLtrReveal(chart) {
+            window._ltrRevealCharts.add(chart);
+            chart._ltrProgress = 0;
+            chart.update('none');
+            var duration = 1200;
+            var start = null;
+            function step(ts) {
+                if (!start) start = ts;
+                var t = Math.min((ts - start) / duration, 1);
+                // easeInOutCubic – starts slow, accelerates, then decelerates
+                chart._ltrProgress = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+                chart.draw();
+                if (t < 1) requestAnimationFrame(step);
+                else { chart._ltrProgress = 1; window._ltrRevealCharts.delete(chart); chart.draw(); }
+            }
+            requestAnimationFrame(step);
+        }
+        function _startAnim(chart, anim, isLtr) {
+            if (isLtr) _runLtrReveal(chart);
+            else {
+                // Restore original data, then animate from zero
+                if (chart._origData) {
+                    chart._origData.forEach(function(arr, i) {
+                        chart.data.datasets[i].data = arr;
+                    });
+                    delete chart._origData;
+                }
+                chart.options.animation = anim || ANIM_GROW;
+                chart.reset();
+                chart.update();
+            }
+        }
+        window.animateOnScroll = function(chart, anim) {
+            if (!chart || !chart.canvas) return chart;
+            var el = chart.canvas;
+            var isLtr = (anim === '_ltr_reveal_');
+            // For LTR: immediately register with progress=0 so grid/axes show but data is clipped
+            // For GROW: hide data by storing it and setting to zeros, so grid/axes render but bars don't
+            if (isLtr) {
+                window._ltrRevealCharts.add(chart);
+                chart._ltrProgress = 0;
+                chart.update('none');
+            } else {
+                // Store original data and zero it out so bars never flash
+                chart._origData = chart.data.datasets.map(function(ds) {
+                    return ds.data.slice();
+                });
+                chart.data.datasets.forEach(function(ds) {
+                    ds.data = ds.data.map(function() { return 0; });
+                });
+                chart.update('none');
+            }
+            var threshold = 0.85;
+            var rect = el.getBoundingClientRect();
+            var visibleH = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+            if (visibleH / rect.height >= threshold) {
+                _startAnim(chart, anim, isLtr);
+                return chart;
+            }
+            var observer = new IntersectionObserver(function(entries) {
+                if (entries[0].isIntersecting) {
+                    observer.disconnect();
+                    _startAnim(chart, anim, isLtr);
+                }
+            }, { threshold: threshold });
+            observer.observe(el);
+            return chart;
+        };
+    </script>
+    <!-- Citation Modal -->
+    <div class="modal fade" id="citeModal" tabindex="-1" aria-labelledby="citeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="citeModalLabel">Cite This Work</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">If you use the HAL Reliability Evaluation in your research, please cite:</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-2"><h6 class="mb-0">HAL Reliability</h6><button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(this.closest('div').nextElementSibling.textContent).then(function(){var b=event.target;b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})">Copy</button></div>
+                    <pre class="bibtex-block p-3 rounded" style="background: var(--bg-card-hover); font-size: 0.82rem; white-space: pre-wrap; cursor: text;">@article{rabanser2026towards,
+  title   = {Towards a Science of AI Agent Reliability},
+  author  = {Stephan Rabanser and Sayash Kapoor and Peter Kirgis and Kangheng Liu and Saiteja Utpala and Arvind Narayanan},
+  journal = {arXiv preprint arXiv:2602.16666},
+  year    = {2026}
+}</pre>
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-2"><h6 class="mb-0">HAL Paper</h6><button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(this.closest('div').nextElementSibling.textContent).then(function(){var b=event.target;b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})">Copy</button></div>
+                    <pre class="bibtex-block p-3 rounded" style="background: var(--bg-card-hover); font-size: 0.82rem; white-space: pre-wrap; cursor: text;">@Misc{hal,
+  title        = {Holistic Agent Leaderboard: The Missing Infrastructure for AI Agent Evaluation},
+  author       = {Sayash Kapoor and Benedikt Stroebl and Peter Kirgis and Nitya Nadgir and Zachary S Siegel and Boyi Wei and Tianci Xue and Ziru Chen and Felix Chen and Saiteja Utpala and Franck Ndzomga and Dheeraj Oruganty and Sophie Luskin and Kangheng Liu and Botao Yu and Amit Arora and Dongyoon Hahm and Harsh Trivedi and Huan Sun and Juyong Lee and Tengjun Jin and Yifan Mai and Yifei Zhou and Yuxuan Zhu and Rishi Bommasani and Daniel Kang and Dawn Song and Peter Henderson and Yu Su and Percy Liang and Arvind Narayanan},
+  howpublished = {\url{https://github.com/princeton-pli/hal-harness}},
+  year         = {2025}
+}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

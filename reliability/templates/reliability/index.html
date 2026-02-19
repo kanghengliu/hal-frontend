@@ -1,0 +1,338 @@
+{% extends "reliability/base.html" %}
+{% block title %}HAL Reliability Dashboard{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section mb-5">
+    <div class="row align-items-center">
+        <div class="col-lg-7">
+            <h1 class="hero-title">Accuracy is not enough.</h1>
+            <p class="hero-subtitle">
+                Rising accuracy scores suggest rapid progress, but agents still fail unpredictably in practice.
+                A single success metric obscures whether agents behave <strong>consistently</strong> across runs,
+                withstand <strong>perturbations</strong>, fail <strong>predictably</strong>, or respect <strong>safety</strong> constraints.
+                We evaluate {{ stats.num_agents }} agents across {{ stats.num_benchmarks }} benchmarks on twelve metrics spanning four reliability dimensions &mdash; and find that recent capability gains have yielded only small improvements in reliability.
+            </p>
+            {% if hero_insight %}
+            <p class="hero-insight mt-3"><i class="fa-solid fa-lightbulb me-2"></i>{{ hero_insight }}</p>
+            {% endif %}
+        </div>
+        <div class="col-lg-5">
+            <div class="hero-sidebar">
+                <div class="d-flex gap-3 justify-content-center mb-3">
+                    <div class="hero-stat-card">
+                        <div class="hero-stat-number">{{ stats.num_agents }}</div>
+                        <div class="hero-stat-label">Agents Evaluated</div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="hero-stat-number">{{ stats.num_benchmarks }}</div>
+                        <div class="hero-stat-label">Benchmarks</div>
+                    </div>
+                    <div class="hero-stat-card">
+                        <div class="hero-stat-number">4</div>
+                        <div class="hero-stat-label">Reliability Dimensions</div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                    <a href="https://arxiv.org/abs/2602.16666" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-file-lines me-1"></i>Paper</a>
+                    <a href="#findings" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-lightbulb me-1"></i>Key Findings</a>
+                    <a href="{{ url_for('reliability.methodology') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-book me-1"></i>Methodology</a>
+                    <a href="#" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#citeModal"><i class="fa-solid fa-quote-left me-1"></i>Cite This Work</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "reliability/trend_charts.html" %}
+
+{% set metric_short = {
+    'C_out': 'Outc', 'C_traj_d': 'Traj-D', 'C_traj_s': 'Traj-S', 'C_res': 'Res',
+    'P_cal': 'Cal', 'P_auroc': 'AUROC', 'P_brier': 'Brier',
+    'R_fault': 'Fault', 'R_struct': 'Struct', 'R_prompt': 'Prompt',
+    'S_harm': 'Harm', 'S_comp': 'Comp', 'S_safety': 'Safety'
+} %}
+{% set metric_tip = {
+    'C_out': 'Outcome consistency across runs', 'C_traj_d': 'Trajectory consistency (distributional)', 'C_traj_s': 'Trajectory consistency (sequential)', 'C_res': 'Resource usage consistency',
+    'P_cal': 'Confidence calibration', 'P_auroc': 'Confidence discrimination (AUROC)', 'P_brier': 'Brier score (inverted)',
+    'R_fault': 'Fault injection tolerance', 'R_struct': 'Structural perturbation robustness', 'R_prompt': 'Prompt rewording robustness',
+    'S_harm': 'Harm avoidance', 'S_comp': 'Constraint compliance', 'S_safety': 'Overall safety score'
+} %}
+<div class="row g-4 mb-4">
+    <!-- Leaderboard -->
+    <div class="col-12">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <h5 class="mb-0">Agent Leaderboard</h5>
+                <select id="leaderboardBenchSelect" class="form-select form-select-sm" style="width: auto; min-width: 180px;">
+                    <option value="All Benchmarks" selected>All Benchmarks</option>
+                    {% for bname in landing_benchmarks %}
+                    <option value="{{ bench_display(bname) }}">{{ bench_display(bname) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle leaderboard-table small">
+                        <thead>
+                            <tr class="leaderboard-group-row">
+                                <th rowspan="2">#</th>
+                                <th rowspan="2" class="sortable" data-sort="display_name">Agent</th>
+                                <th rowspan="2" class="sortable" data-sort="accuracy">Acc</th>
+                                {% for dim in dimensions %}
+                                <th colspan="{{ leaderboard_dim_metrics[dim]|length + 1 }}" class="leaderboard-group-header"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }} <a tabindex="0" role="button" class="info-pop" data-bs-toggle="popover" data-bs-html="true" data-bs-content="{{ dim_tooltips[dim] }} &lt;a href='{{ url_for("reliability.methodology") }}#{{ dim_anchors[dim] }}'&gt;Definition &amp;rarr;&lt;/a&gt;"><i class="fa-solid fa-circle-info text-muted"></i></a></th>
+                                {% endfor %}
+                                <th rowspan="2" class="leaderboard-dim-col sortable" data-sort="overall_reliability">Overall</th>
+                            </tr>
+                            <tr class="leaderboard-sub-row">
+                                {% for dim in dimensions %}
+                                <th class="leaderboard-dim-col sortable" data-sort="dim_{{ dim }}">Agg</th>
+                                {% for m in leaderboard_dim_metrics[dim] %}
+                                <th class="sortable" data-sort="{{ m }}"><span title="{{ metric_tip.get(m, m) }}">{{ metric_short.get(m, m) }}</span></th>
+                                {% endfor %}
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboardBody">
+                            {% for agent in leaderboard %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td class="text-nowrap"><a href="{{ url_for('reliability.agent', name=agent.display_name) }}" class="text-decoration-none">{% set _pl = provider_logos.get(agent.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ agent.provider }}">{% endif %}{{ agent.display_name }}</a></td>
+                                <td><span class="badge-metric">{{ "%.1f"|format((agent.accuracy or 0) * 100) }}%</span></td>
+                                {% for dim in dimensions %}
+                                <td class="leaderboard-dim-col">
+                                    {% set val = agent.get("dim_" ~ dim, None) %}
+                                    {% if val is not none %}
+                                    <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                {% for m in leaderboard_dim_metrics[dim] %}
+                                <td>
+                                    {% set val = agent.get(m, None) %}
+                                    {% if val is not none %}
+                                    <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                {% endfor %}
+                                {% endfor %}
+                                <td class="leaderboard-dim-col">
+                                    {% set ov = agent.get("overall_reliability", None) %}
+                                    {% if ov is not none %}
+                                    <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Benchmark Quick Links -->
+<h2 class="mb-4" style="font-family: 'Source Serif 4', Georgia, serif; font-weight: 700;">Benchmarks</h2>
+<div class="row g-4 mb-5">
+    {% for bname in landing_benchmarks %}
+    <div class="col-md-6">
+        <a href="{{ url_for('reliability.benchmark', name=bname) }}" class="text-decoration-none">
+            <div class="card benchmark-card">
+                <div class="card-body">
+                    <h5>{{ bench_display(bname) }}</h5>
+                    {% if bench_short_desc.get(bname) %}<p class="text-muted mb-2" style="font-size: 0.88rem;">{{ bench_short_desc[bname] }}</p>{% endif %}
+                    <p class="mb-0" style="font-size: 0.85rem;">View detailed reliability analysis &rarr;</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Key Findings -->
+<div id="findings">
+    <h2 class="mb-4" style="font-family: 'Source Serif 4', Georgia, serif; font-weight: 700;">Key Findings</h2>
+    <div class="row g-4">
+        {% for f in findings %}
+        <div class="col-lg-6">
+            <div class="card finding-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="finding-icon-wrap me-3" style="background: {{ f.color }}15; color: {{ f.color }};">
+                            <i class="{{ f.icon }}"></i>
+                        </div>
+                        <div>
+                            <h5 class="finding-title mb-1">{{ f.title }}</h5>
+                            <p class="finding-body mb-2">{{ f.body | safe }}</p>
+                            <p class="finding-detail text-muted mb-0"><small>{{ f.detail }}</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Recommendations -->
+{% if recommendations %}
+<div id="recommendations" class="mt-5">
+    <h2 class="mb-4" style="font-family: 'Source Serif 4', Georgia, serif; font-weight: 700;">Recommendations</h2>
+    <div class="row g-4">
+        {% for r in recommendations %}
+        <div class="col-lg-6">
+            <div class="card finding-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="finding-icon-wrap me-3" style="background: {{ r.color }}15; color: {{ r.color }};">
+                            <i class="{{ r.icon }}"></i>
+                        </div>
+                        <div>
+                            <h5 class="finding-title mb-1">{{ r.title }}</h5>
+                            <p class="finding-body mb-2">{{ r.body | safe }}</p>
+                            <p class="finding-detail text-muted mb-0"><small>{{ r.detail }}</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var _lbData = {{ leaderboard_by_bench | safe }};
+    var _dims = {{ dimensions | tojson }};
+    var _dimMetrics = {{ leaderboard_dim_metrics | tojson }};
+    var _provLogos = {
+        openai: ['{{ url_for("reliability.static", filename="openai.svg") }}', false],
+        anthropic: ['{{ url_for("reliability.static", filename="anthropic.svg") }}', false],
+        google: ['{{ url_for("reliability.static", filename="gemini.svg") }}', false]
+    };
+
+    function metricColor(val) {
+        if (val == null) return '#475569';
+        var v = Math.max(0, Math.min(1, val));
+        var R = [239,68,68], O = [245,158,11], G = [16,185,129];
+        var r, g, b;
+        if (v <= 0.5) { r = R[0]; g = R[1]; b = R[2]; }
+        else if (v <= 0.75) {
+            var t = (v - 0.5) / 0.25;
+            r = Math.round(R[0] + (O[0]-R[0])*t);
+            g = Math.round(R[1] + (O[1]-R[1])*t);
+            b = Math.round(R[2] + (O[2]-R[2])*t);
+        } else {
+            var t = (v - 0.75) / 0.25;
+            r = Math.round(O[0] + (G[0]-O[0])*t);
+            g = Math.round(O[1] + (G[1]-O[1])*t);
+            b = Math.round(O[2] + (G[2]-O[2])*t);
+        }
+        return 'rgb('+r+','+g+','+b+')';
+    }
+
+    function badge(val) {
+        if (val == null) return '<span class="text-muted">\u2014</span>';
+        return '<span class="badge-metric" style="background:' + metricColor(val) + '">' + val.toFixed(2) + '</span>';
+    }
+
+    function agentLink(name) {
+        return '{{ url_for("reliability.agent", name="__NAME__") }}'.replace('__NAME__', encodeURIComponent(name));
+    }
+
+    function renderLeaderboard(agents) {
+        var tbody = document.getElementById('leaderboardBody');
+        var html = '';
+        agents.forEach(function(a, i) {
+            html += '<tr>';
+            html += '<td>' + (i + 1) + '</td>';
+            // Agent name with provider logo
+            var logoHtml = '';
+            var pl = _provLogos[a.provider];
+            if (pl) {
+                logoHtml = '<img src="' + pl[0] + '" class="provider-logo' + (pl[1] ? ' logo-invert' : '') + '" alt="' + (a.provider||'') + '">';
+            }
+            html += '<td class="text-nowrap"><a href="' + agentLink(a.display_name) + '" class="text-decoration-none">' + logoHtml + a.display_name + '</a></td>';
+            // Accuracy
+            var acc = a.accuracy != null ? (a.accuracy * 100).toFixed(1) + '%' : '\u2014';
+            html += '<td><span class="badge-metric">' + acc + '</span></td>';
+            // Dimensions
+            _dims.forEach(function(dim) {
+                // Dim average
+                var dval = a['dim_' + dim];
+                html += '<td class="leaderboard-dim-col">' + badge(dval) + '</td>';
+                // Sub-metrics
+                _dimMetrics[dim].forEach(function(m) {
+                    html += '<td>' + badge(a[m]) + '</td>';
+                });
+            });
+            // Overall
+            var ov = a.overall_reliability;
+            if (ov != null) {
+                html += '<td class="leaderboard-dim-col"><span class="badge-metric badge-overall">' + ov.toFixed(2) + '</span></td>';
+            } else {
+                html += '<td class="leaderboard-dim-col"></td>';
+            }
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
+
+    // ── Sorting ──
+    var _currentData = _lbData['All Benchmarks'];
+    var _sortCol = 'overall_reliability';
+    var _sortAsc = false;
+
+    function sortData(data, col, asc) {
+        return data.slice().sort(function(a, b) {
+            var va = a[col], vb = b[col];
+            if (col === 'display_name') {
+                return asc ? (va||'').localeCompare(vb||'') : (vb||'').localeCompare(va||'');
+            }
+            if (va == null && vb == null) return 0;
+            if (va == null) return 1;
+            if (vb == null) return -1;
+            return asc ? va - vb : vb - va;
+        });
+    }
+
+    function updateSortIndicators() {
+        document.querySelectorAll('.leaderboard-table .sortable').forEach(function(th) {
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (th.dataset.sort === _sortCol) {
+                th.classList.add(_sortAsc ? 'sort-asc' : 'sort-desc');
+            }
+        });
+    }
+
+    document.querySelectorAll('.leaderboard-table .sortable').forEach(function(th) {
+        th.addEventListener('click', function() {
+            var col = this.dataset.sort;
+            if (_sortCol === col) {
+                _sortAsc = !_sortAsc;
+            } else {
+                _sortCol = col;
+                _sortAsc = col === 'display_name';
+            }
+            renderLeaderboard(sortData(_currentData, _sortCol, _sortAsc));
+            updateSortIndicators();
+        });
+    });
+
+    document.getElementById('leaderboardBenchSelect').addEventListener('change', function() {
+        var key = this.value;
+        var data = _lbData[key];
+        if (data) {
+            _currentData = data;
+            renderLeaderboard(sortData(_currentData, _sortCol, _sortAsc));
+            updateSortIndicators();
+        }
+    });
+
+    updateSortIndicators();
+})();
+</script>
+{% endblock %}

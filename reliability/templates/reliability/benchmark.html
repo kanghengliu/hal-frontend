@@ -1,0 +1,278 @@
+{% extends "reliability/base.html" %}
+{% block title %}{{ name }} — Reliability Dashboard{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Benchmark: <span class="text-primary">{{ bench_display(name) }}</span></h2>
+{% if bench_desc %}
+<p class="text-muted mb-4">{{ bench_desc | safe }}</p>
+{% if bench_refs %}
+<p class="mb-3">
+    {% if bench_refs.paper %}<a href="{{ bench_refs.paper[1] }}" target="_blank" rel="noopener" class="text-decoration-none me-3"><i class="fa-solid fa-file-lines me-1"></i>{{ bench_refs.paper[0] }}</a>{% endif %}
+    {% if bench_refs.issues %}<a href="{{ bench_refs.issues[1] }}" target="_blank" rel="noopener" class="text-decoration-none me-3"><i class="fa-solid fa-file-lines me-1"></i>{{ bench_refs.issues[0] }}</a>{% endif %}
+    {% if bench_refs.website %}<a href="{{ bench_refs.website[1] }}" target="_blank" rel="noopener" class="text-decoration-none"><i class="fa-solid fa-arrow-up-right-from-square me-1"></i>{{ bench_refs.website[0] }}</a>{% endif %}
+</p>
+{% endif %}
+{% if name == 'taubench_airline_original' %}
+<p class="mb-4"><a href="{{ url_for('reliability.compare_taubench') }}" class="text-decoration-none">Compare with curated subset (26 tasks with grading/specification issues removed) &rarr;</a></p>
+{% elif name == 'taubench_airline' %}
+<p class="mb-4"><a href="{{ url_for('reliability.compare_taubench') }}" class="text-decoration-none">Compare with original dataset (all 50 tasks) &rarr;</a></p>
+{% endif %}
+{% endif %}
+
+<!-- Dimension Bar Charts -->
+<div class="row g-4 mb-4">
+    {% for dim in dimensions %}
+    <div class="col-md-6 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center"><h6 class="mb-0"><a href="{{ url_for('reliability.dimension_detail', bench=name, dim=dim|lower) }}" class="text-decoration-none"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }} &rarr;</a></h6><a tabindex="0" role="button" class="info-pop" data-bs-toggle="popover" data-bs-html="true" data-bs-content="{{ dim_tooltips[dim] }} &lt;a href='{{ url_for("reliability.methodology") }}#{{ dim_anchors[dim] }}'&gt;Definition &rarr;&lt;/a&gt;"><i class="fa-solid fa-circle-info text-muted"></i></a></div>
+            <div class="card-body">
+                <div id="barWrap_{{ dim }}" style="position:relative; width:100%;"><canvas id="bar_{{ dim }}"></canvas></div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% include "reliability/trend_charts.html" %}
+
+{% set metric_short = {
+    'C_out': 'Outc', 'C_traj_d': 'Traj-D', 'C_traj_s': 'Traj-S', 'C_res': 'Res',
+    'P_cal': 'Cal', 'P_auroc': 'AUROC', 'P_brier': 'Brier',
+    'R_fault': 'Fault', 'R_struct': 'Struct', 'R_prompt': 'Prompt',
+    'S_harm': 'Harm', 'S_comp': 'Comp', 'S_safety': 'Safety'
+} %}
+{% set metric_tip = {
+    'C_out': 'Outcome consistency across runs', 'C_traj_d': 'Trajectory consistency (distributional)', 'C_traj_s': 'Trajectory consistency (sequential)', 'C_res': 'Resource usage consistency',
+    'P_cal': 'Confidence calibration', 'P_auroc': 'Confidence discrimination (AUROC)', 'P_brier': 'Brier score (inverted)',
+    'R_fault': 'Fault injection tolerance', 'R_struct': 'Structural perturbation robustness', 'R_prompt': 'Prompt rewording robustness',
+    'S_harm': 'Harm avoidance', 'S_comp': 'Constraint compliance', 'S_safety': 'Overall safety score'
+} %}
+<!-- Agent Leaderboard -->
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">Agent Leaderboard</h5></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle leaderboard-table small">
+                <thead>
+                    <tr class="leaderboard-group-row">
+                        <th rowspan="2">#</th>
+                        <th rowspan="2" class="sortable" data-sort="display_name">Agent</th>
+                        <th rowspan="2" class="sortable" data-sort="accuracy">Acc</th>
+                        {% for dim in dimensions %}
+                        <th colspan="{{ leaderboard_dim_metrics[dim]|length + 1 }}" class="leaderboard-group-header"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }} <a tabindex="0" role="button" class="info-pop" data-bs-toggle="popover" data-bs-html="true" data-bs-content="{{ dim_tooltips[dim] }} &lt;a href='{{ url_for("reliability.methodology") }}#{{ dim_anchors[dim] }}'&gt;Definition &amp;rarr;&lt;/a&gt;"><i class="fa-solid fa-circle-info text-muted"></i></a></th>
+                        {% endfor %}
+                        <th rowspan="2" class="leaderboard-dim-col sortable" data-sort="overall_reliability">Overall</th>
+                    </tr>
+                    <tr class="leaderboard-sub-row">
+                        {% for dim in dimensions %}
+                        <th class="leaderboard-dim-col sortable" data-sort="dim_{{ dim }}">Agg</th>
+                        {% for m in leaderboard_dim_metrics[dim] %}
+                        <th class="sortable" data-sort="{{ m }}"><span title="{{ metric_tip.get(m, m) }}">{{ metric_short.get(m, m) }}</span></th>
+                        {% endfor %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                    {% for a in agents %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="text-nowrap"><a href="{{ url_for('reliability.agent_benchmark', agent_name=a.display_name, bench=name) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
+                        <td><span class="badge-metric">{{ "%.1f"|format((a.accuracy or 0) * 100) }}%</span></td>
+                        {% for dim in dimensions %}
+                        <td class="leaderboard-dim-col">
+                            {% set val = a.get("dim_" ~ dim, None) %}
+                            {% if val is not none %}
+                            <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        {% for m in leaderboard_dim_metrics[dim] %}
+                        <td>
+                            {% set val = a.get(m, None) %}
+                            {% if val is not none %}
+                            <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        {% endfor %}
+                        {% endfor %}
+                        <td class="leaderboard-dim-col">
+                            {% set ov = a.get("overall_reliability", None) %}
+                            {% if ov is not none %}
+                            <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const barData = {{ bar_data | safe }};
+const dims = {{ dimensions | tojson }};
+var barCharts = [];
+dims.forEach(dim => {
+    const d = barData[dim];
+    var wrap = document.getElementById('barWrap_' + dim);
+    var nBars = d.labels.length;
+    var barH = window.innerWidth < 768 ? 36 : 24;
+    var minH = Math.max(200, nBars * barH + 40);
+    wrap.style.minHeight = minH + 'px';
+    var chart = new Chart(document.getElementById('bar_' + dim), {
+        type: 'bar',
+        data: {
+            labels: d.labels.map(l => l.length > 20 ? l.slice(0, 19) + '…' : l),
+            datasets: [{
+                data: d.values,
+                backgroundColor: d.colors,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            layout: { padding: { left: 18 } },
+            scales: {
+                x: { min: 0, max: 1, ticks: { color: getChartColors().tick }, grid: { color: getChartColors().grid } },
+                y: { ticks: { color: getChartColors().label, font: { size: 11 } }, grid: { display: false } },
+            },
+            plugins: { legend: { display: false } },
+            animation: false
+        }
+    });
+    chart._providerList = d.providers;
+    animateOnScroll(chart, ANIM_GROW);
+    barCharts.push(chart);
+});
+window.addEventListener('theme-changed', function() {
+    var c = getChartColors();
+    barCharts.forEach(function(ch) {
+        ch.options.scales.x.ticks.color = c.tick;
+        ch.options.scales.x.grid.color = c.grid;
+        ch.options.scales.y.ticks.color = c.label;
+        ch.update();
+    });
+});
+
+// ── Leaderboard sorting ──
+(function() {
+    var _agents = {{ agents | tojson }};
+    var _dims = {{ dimensions | tojson }};
+    var _dimMetrics = {{ leaderboard_dim_metrics | tojson }};
+    var _provLogos = {
+        openai: ['{{ url_for("reliability.static", filename="openai.svg") }}', false],
+        anthropic: ['{{ url_for("reliability.static", filename="anthropic.svg") }}', false],
+        google: ['{{ url_for("reliability.static", filename="gemini.svg") }}', false]
+    };
+    var _benchName = {{ name | tojson }};
+
+    function metricColor(val) {
+        if (val == null) return '#475569';
+        var v = Math.max(0, Math.min(1, val));
+        var R = [239,68,68], O = [245,158,11], G = [16,185,129];
+        var r, g, b;
+        if (v <= 0.5) { r = R[0]; g = R[1]; b = R[2]; }
+        else if (v <= 0.75) {
+            var t = (v - 0.5) / 0.25;
+            r = Math.round(R[0] + (O[0]-R[0])*t);
+            g = Math.round(R[1] + (O[1]-R[1])*t);
+            b = Math.round(R[2] + (O[2]-R[2])*t);
+        } else {
+            var t = (v - 0.75) / 0.25;
+            r = Math.round(O[0] + (G[0]-O[0])*t);
+            g = Math.round(O[1] + (G[1]-O[1])*t);
+            b = Math.round(O[2] + (G[2]-O[2])*t);
+        }
+        return 'rgb('+r+','+g+','+b+')';
+    }
+
+    function badge(val) {
+        if (val == null) return '<span class="text-muted">\u2014</span>';
+        return '<span class="badge-metric" style="background:' + metricColor(val) + '">' + val.toFixed(2) + '</span>';
+    }
+
+    function agentLink(agentName) {
+        return '{{ url_for("reliability.agent_benchmark", agent_name="__AGENT__", bench="__BENCH__") }}'
+            .replace('__AGENT__', encodeURIComponent(agentName))
+            .replace('__BENCH__', encodeURIComponent(_benchName));
+    }
+
+    function renderLeaderboard(agents) {
+        var tbody = document.getElementById('leaderboardBody');
+        var html = '';
+        agents.forEach(function(a, i) {
+            html += '<tr>';
+            html += '<td>' + (i + 1) + '</td>';
+            var logoHtml = '';
+            var pl = _provLogos[a.provider];
+            if (pl) {
+                logoHtml = '<img src="' + pl[0] + '" class="provider-logo' + (pl[1] ? ' logo-invert' : '') + '" alt="' + (a.provider||'') + '">';
+            }
+            html += '<td class="text-nowrap"><a href="' + agentLink(a.display_name) + '" class="text-decoration-none">' + logoHtml + a.display_name + '</a></td>';
+            var acc = a.accuracy != null ? (a.accuracy * 100).toFixed(1) + '%' : '\u2014';
+            html += '<td><span class="badge-metric">' + acc + '</span></td>';
+            _dims.forEach(function(dim) {
+                var dval = a['dim_' + dim];
+                html += '<td class="leaderboard-dim-col">' + badge(dval) + '</td>';
+                _dimMetrics[dim].forEach(function(m) {
+                    html += '<td>' + badge(a[m]) + '</td>';
+                });
+            });
+            var ov = a.overall_reliability;
+            if (ov != null) {
+                html += '<td class="leaderboard-dim-col"><span class="badge-metric badge-overall">' + ov.toFixed(2) + '</span></td>';
+            } else {
+                html += '<td class="leaderboard-dim-col"></td>';
+            }
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
+
+    var _sortCol = 'overall_reliability';
+    var _sortAsc = false;
+
+    function sortData(data, col, asc) {
+        return data.slice().sort(function(a, b) {
+            var va = a[col], vb = b[col];
+            if (col === 'display_name') {
+                return asc ? (va||'').localeCompare(vb||'') : (vb||'').localeCompare(va||'');
+            }
+            if (va == null && vb == null) return 0;
+            if (va == null) return 1;
+            if (vb == null) return -1;
+            return asc ? va - vb : vb - va;
+        });
+    }
+
+    function updateSortIndicators() {
+        document.querySelectorAll('.leaderboard-table .sortable').forEach(function(th) {
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (th.dataset.sort === _sortCol) {
+                th.classList.add(_sortAsc ? 'sort-asc' : 'sort-desc');
+            }
+        });
+    }
+
+    document.querySelectorAll('.leaderboard-table .sortable').forEach(function(th) {
+        th.addEventListener('click', function() {
+            var col = this.dataset.sort;
+            if (_sortCol === col) {
+                _sortAsc = !_sortAsc;
+            } else {
+                _sortCol = col;
+                _sortAsc = col === 'display_name';
+            }
+            renderLeaderboard(sortData(_agents, _sortCol, _sortAsc));
+            updateSortIndicators();
+        });
+    });
+
+    updateSortIndicators();
+})();
+</script>
+{% endblock %}

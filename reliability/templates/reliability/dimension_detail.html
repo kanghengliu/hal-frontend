@@ -1,0 +1,1009 @@
+{% extends "reliability/base.html" %}
+{% block title %}{{ dimension }} — {{ bench_display(benchmark) }} — Reliability Dashboard{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="{{ dim_icons[dimension] }} me-2"></i>{{ dimension }} <span class="text-muted fs-5">on <a href="{{ url_for('reliability.benchmark', name=benchmark) }}" class="text-decoration-none">{{ bench_display(benchmark) }}</a></span></h2>
+{% if dim_tooltips[dimension] is defined %}
+<p class="text-muted mb-4">{{ dim_tooltips[dimension] }} <a href="{{ url_for('reliability.methodology') }}#{{ dim_anchors[dimension] }}" class="text-decoration-none">See full definition &rarr;</a></p>
+{% endif %}
+
+{# ── Dimension navigation pills ── #}
+<ul class="nav nav-pills mb-4">
+    {% for d in ["Consistency","Predictability","Robustness","Safety"] %}
+    <li class="nav-item">
+        <a class="nav-link {% if d == dimension %}active{% endif %}"
+           href="{{ url_for('reliability.dimension_detail', bench=benchmark, dim=d|lower) }}"><i class="{{ dim_icons[d] }} me-1"></i>{{ d }}</a>
+    </li>
+    {% endfor %}
+</ul>
+
+{# ══════════════════════════════════════════════════════ #}
+{#                   PREDICTABILITY                       #}
+{# ══════════════════════════════════════════════════════ #}
+{% if dimension == "Predictability" %}
+<div class="row g-4 mb-4">
+    {# Sub-metric bar chart #}
+    <div class="col-lg-12">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Sub-metric Comparison</h6></div>
+            <div class="card-body" style="min-height: 480px;"><canvas id="submetricBar"></canvas></div>
+        </div>
+    </div>
+</div>
+
+{# Per-agent Calibration Curves #}
+<h5 class="mt-4 mb-3">Calibration Curves</h5>
+<div class="row g-4 mb-4">
+    {% for a in agents %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</h6>
+                <span class="badge-metric" id="cal_metric_{{ loop.index0 }}" style="font-size: 0.75rem;"></span>
+            </div>
+            <div class="card-body"><canvas id="cal_{{ loop.index0 }}"></canvas></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{# Per-agent Accuracy-Coverage Curves #}
+<h5 class="mt-4 mb-3">Accuracy-Coverage Curves</h5>
+<div class="row g-4 mb-4">
+    {% for a in agents %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</h6>
+                <span class="badge-metric" id="aurc_metric_{{ loop.index0 }}" style="font-size: 0.75rem;"></span>
+            </div>
+            <div class="card-body"><canvas id="aurc_{{ loop.index0 }}"></canvas></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{# ══════════════════════════════════════════════════════ #}
+{#                   CONSISTENCY                          #}
+{# ══════════════════════════════════════════════════════ #}
+{% elif dimension == "Consistency" %}
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Sub-metric Comparison</h6></div>
+            <div class="card-body" style="min-height: 480px;"><canvas id="submetricBar"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Resource Consistency Breakdown</h6></div>
+            <div class="card-body" style="min-height: 480px;"><canvas id="cvBreakdown"></canvas></div>
+        </div>
+    </div>
+</div>
+
+{# Task Outcome Consistency — per-agent cell grids #}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Per-Agent Task Outcome Consistency</h5>
+        <small class="text-muted" id="heatmapInfo"></small>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">Each cell represents a task. Color shows outcome consistency across runs. Hover to see task ID.</p>
+        <div id="heatmapContainer" style="overflow-x:auto;"></div>
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════ #}
+{#                   ROBUSTNESS                           #}
+{# ══════════════════════════════════════════════════════ #}
+{% elif dimension == "Robustness" %}
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Sub-metric Comparison</h6></div>
+            <div class="card-body" style="min-height: 480px;"><canvas id="submetricBar"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Baseline vs Perturbed Accuracy</h6></div>
+            <div class="card-body" style="min-height: 480px;"><canvas id="robustnessCompare"></canvas></div>
+        </div>
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════ #}
+{#                      SAFETY                            #}
+{# ══════════════════════════════════════════════════════ #}
+{% elif dimension == "Safety" %}
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Sub-metric Comparison</h6></div>
+            <div class="card-body" style="min-height: 480px;"><canvas id="submetricBar"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Per-Constraint Compliance</h6></div>
+            <div class="card-body" style="min-height: 480px;"><canvas id="constraintBar"></canvas></div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+{% set metric_short = {
+    'C_out': 'Outc', 'C_traj_d': 'Traj-D', 'C_traj_s': 'Traj-S', 'C_res': 'Res',
+    'P_cal': 'Cal', 'P_auroc': 'AUROC', 'P_brier': 'Brier',
+    'R_fault': 'Fault', 'R_struct': 'Struct', 'R_prompt': 'Prompt',
+    'S_harm': 'Harm', 'S_comp': 'Comp', 'S_safety': 'Safety'
+} %}
+{% set metric_tip = {
+    'C_out': 'Outcome consistency across runs', 'C_traj_d': 'Trajectory consistency (distributional)', 'C_traj_s': 'Trajectory consistency (sequential)', 'C_res': 'Resource usage consistency',
+    'P_cal': 'Confidence calibration', 'P_auroc': 'Confidence discrimination (AUROC)', 'P_brier': 'Brier score (inverted)',
+    'R_fault': 'Fault injection tolerance', 'R_struct': 'Structural perturbation robustness', 'R_prompt': 'Prompt rewording robustness',
+    'S_harm': 'Harm avoidance', 'S_comp': 'Constraint compliance', 'S_safety': 'Overall safety score'
+} %}
+{# ── Leaderboard table (dimension-specific) ── #}
+<div class="card mt-4">
+    <div class="card-header"><h5 class="mb-0">Agent Leaderboard — {{ dimension }}</h5></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle leaderboard-table small">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="_rank">#</th>
+                        <th class="sortable" data-sort="display_name">Agent</th>
+                        <th class="sortable" data-sort="accuracy">Acc</th>
+                        <th class="leaderboard-dim-col sortable" data-sort="dim_{{ dimension }}">{{ dimension }} Agg</th>
+                        {% for m in leaderboard_dim_metrics[dimension] %}
+                        <th class="sortable" data-sort="{{ m }}"><span title="{{ metric_tip.get(m, m) }}">{{ metric_short.get(m, m) }}</span></th>
+                        {% endfor %}
+                        <th class="leaderboard-dim-col sortable" data-sort="overall_reliability">Overall</th>
+                    </tr>
+                </thead>
+                <tbody id="dimLeaderboardBody">
+                    {% for a in leaderboard_agents %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="text-nowrap"><a href="{{ url_for('reliability.agent_benchmark', agent_name=a.display_name, bench=benchmark) }}" class="text-decoration-none">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</a></td>
+                        <td><span class="badge-metric">{{ "%.1f"|format((a.accuracy or 0) * 100) }}%</span></td>
+                        <td class="leaderboard-dim-col">
+                            {% set val = a.get("dim_" ~ dimension, None) %}
+                            {% if val is not none %}
+                            <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        {% for m in leaderboard_dim_metrics[dimension] %}
+                        <td>
+                            {% set val = a.get(m, None) %}
+                            {% if val is not none %}
+                            <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="leaderboard-dim-col">
+                            {% set ov = a.get("overall_reliability", None) %}
+                            {% if ov is not none %}
+                            <span class="badge-metric badge-overall">{{ "%.2f"|format(ov) }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const agents = {{ agents_json | safe }};
+const dimension = {{ dimension | tojson }};
+const providerColors = {{ provider_colors | safe }};
+const _providerLogos = { openai: '{{ url_for("reliability.static", filename="openai.svg") }}', anthropic: '{{ url_for("reliability.static", filename="anthropic.svg") }}', google: '{{ url_for("reliability.static", filename="gemini.svg") }}' };
+function providerLogoHtml(provider) {
+    var f = _providerLogos[provider];
+    return f ? '<img src="' + f + '" class="provider-logo" alt="' + provider + '">' : '';
+}
+const METRIC_NAMES = {
+    'C_out': 'Outcome Consistency',
+    'C_out_global': 'Outcome (Global)',
+    'C_out_task': 'Outcome (Task)',
+    'C_traj_d': 'Trajectory Consistency (Distributional)',
+    'C_traj_s': 'Trajectory Consistency (Sequential)',
+    'C_conf': 'Confidence Consistency',
+    'C_res': 'Resource Consistency',
+    'P_rc': 'Risk-Coverage',
+    'P_cal': 'Calibration',
+    'P_auroc': 'Discrimination',
+    'P_brier': 'Brier Score',
+    'R_fault': 'Fault Tolerance',
+    'R_struct': 'Structural Robustness',
+    'R_prompt': 'Prompt Robustness',
+    'S_harm': 'Harm Avoidance',
+    'S_comp': 'Compliance',
+    'S_safety': 'Safety Score',
+    'A_rate': 'Abstention Rate',
+    'A_prec': 'Abstention Precision',
+    'A_rec': 'Abstention Recall',
+    'A_sel': 'Selective Accuracy',
+    'A_cal': 'Abstention Calibration',
+    'mean_confidence': 'Mean Confidence',
+};
+function metricName(name) { return METRIC_NAMES[name] || name; }
+const AGENT_COLORS = [
+    "#2563eb","#dc2626","#059669","#d97706","#7c3aed",
+    "#0891b2","#be185d","#0d9488","#4f46e5","#ca8a04",
+    "#e11d48","#65a30d","#6366f1"
+];
+function agentColor(a, i) {
+    return providerColors[a.provider] || AGENT_COLORS[i % AGENT_COLORS.length];
+}
+var allCharts = [];
+function regChart(c, anim) {
+    allCharts.push(c);
+    // Auto-attach provider logos for horizontal bar charts
+    if (c.options && c.options.indexAxis === 'y' && !c._providerList) {
+        c._providerList = agents.map(a => a.provider);
+        if (!c.options.layout) c.options.layout = {};
+        if (!c.options.layout.padding) c.options.layout.padding = {};
+        c.options.layout.padding.left = 18;
+        c.update('none');
+    }
+    animateOnScroll(c, anim || ANIM_GROW);
+    return c;
+}
+
+// Crosshair plugin: draws a vertical line at hover x and shows interpolated y values
+const crosshairPlugin = {
+    id: 'crosshair',
+    afterDraw(chart) {
+        if (!chart._crosshairX) return;
+        var area = chart.chartArea;
+        var ctx = chart.ctx;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(chart._crosshairX, area.top);
+        ctx.lineTo(chart._crosshairX, area.bottom);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = getChartColors().tick;
+        ctx.setLineDash([4, 3]);
+        ctx.stroke();
+        ctx.restore();
+    },
+};
+Chart.register(crosshairPlugin);
+
+// Interpolate y value at a given x for a sorted dataset
+function interpolateY(data, xVal) {
+    if (!data || data.length === 0) return null;
+    if (xVal <= data[0].x) return data[0].y;
+    if (xVal >= data[data.length - 1].x) return data[data.length - 1].y;
+    for (var i = 0; i < data.length - 1; i++) {
+        if (data[i].x <= xVal && data[i + 1].x >= xVal) {
+            var t = (xVal - data[i].x) / (data[i + 1].x - data[i].x);
+            return data[i].y + t * (data[i + 1].y - data[i].y);
+        }
+    }
+    return null;
+}
+
+function _getOrCreateTooltipEl(chart) {
+    var el = chart.canvas.parentNode.querySelector('.crosshair-tooltip');
+    if (!el) {
+        el = document.createElement('div');
+        el.className = 'crosshair-tooltip';
+        el.style.cssText = 'position:absolute;pointer-events:none;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:11px;line-height:1.6;z-index:10;white-space:nowrap;color:var(--text-primary);box-shadow:0 4px 12px var(--shadow-card-hover);';
+        chart.canvas.parentNode.style.position = 'relative';
+        chart.canvas.parentNode.appendChild(el);
+    }
+    return el;
+}
+
+function _updateCrosshairTooltip(chart) {
+    var el = _getOrCreateTooltipEl(chart);
+    if (!chart._crosshairX) { el.style.display = 'none'; return; }
+    var xVal = chart.scales.x.getValueForPixel(chart._crosshairX);
+    if (xVal == null) { el.style.display = 'none'; return; }
+    var xLabel = chart.options.scales.x.title.text || 'x';
+    var lines = ['<strong>' + xLabel + ': ' + xVal.toFixed(3) + '</strong>'];
+    chart.data.datasets.forEach(function(ds) {
+        if (!ds.showLine || !ds.data || ds.data.length === 0) return;
+        var yVal = interpolateY(ds.data, xVal);
+        if (yVal == null) return;
+        var c = ds.borderColor || '#888';
+        lines.push('<span style="color:' + c + '">■</span> ' + ds.label + ': ' + yVal.toFixed(3));
+    });
+    el.innerHTML = lines.join('<br>');
+    el.style.display = 'block';
+    var area = chart.chartArea;
+    var left = chart._crosshairX + 12;
+    if (left + el.offsetWidth > chart.canvas.parentNode.offsetWidth) {
+        left = chart._crosshairX - el.offsetWidth - 12;
+    }
+    el.style.left = left + 'px';
+    el.style.top = (area.top + 8) + 'px';
+}
+
+// Attach crosshair mouse tracking directly to canvas (works anywhere in chart area)
+function attachCrosshair(chart) {
+    chart.canvas.addEventListener('mousemove', function(e) {
+        var area = chart.chartArea;
+        if (!area) return;
+        var rect = chart.canvas.getBoundingClientRect();
+        var x = e.clientX - rect.left;
+        if (x >= area.left && x <= area.right) {
+            chart._crosshairX = x;
+        } else {
+            chart._crosshairX = null;
+        }
+        chart.draw();
+        _updateCrosshairTooltip(chart);
+    });
+    chart.canvas.addEventListener('mouseleave', function() {
+        chart._crosshairX = null;
+        chart.draw();
+        var el = chart.canvas.parentNode.querySelector('.crosshair-tooltip');
+        if (el) el.style.display = 'none';
+    });
+}
+
+
+// ─── Helper: build sub-metric grouped bar chart ───
+function buildSubmetricBar(canvasId, metrics) {
+    var labels = agents.map(a => a.display_name.length > 20 ? a.display_name.slice(0,19)+'…' : a.display_name);
+    var datasets = metrics.map((m, mi) => ({
+        label: metricName(m),
+        data: agents.map(a => a[m] != null ? a[m] : null),
+        backgroundColor: AGENT_COLORS[mi % AGENT_COLORS.length] + 'cc',
+        borderRadius: 3,
+    }));
+    var cc = getChartColors();
+    var ch = new Chart(document.getElementById(canvasId), {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            layout: { padding: { left: 18 } },
+            scales: {
+                x: { min: 0, max: 1, ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                y: { ticks: { color: cc.label, font: { size: 11 } }, grid: { display: false } },
+            },
+            plugins: { legend: { labels: { color: cc.label } } },
+            animation: false
+        }
+    });
+    ch._providerList = agents.map(a => a.provider);
+    return regChart(ch);
+}
+
+// ══════════════════════════════════════════
+//            PREDICTABILITY
+// ══════════════════════════════════════════
+if (dimension === 'Predictability') {
+    buildSubmetricBar('submetricBar', ['P_cal', 'P_auroc', 'P_brier']);
+
+    // Per-agent calibration curves
+    agents.forEach(function(a, i) {
+        var el = document.getElementById('cal_' + i);
+        if (!el || !a.calibration_bins || a.calibration_bins.length === 0) return;
+        var cc = getChartColors();
+        var color = agentColor(a, i);
+        // Populate header metric
+        var metricEl = document.getElementById('cal_metric_' + i);
+        if (metricEl) {
+            var ece = a.P_cal != null ? (1 - a.P_cal).toFixed(3) : '—';
+            metricEl.textContent = 'ECE = ' + ece;
+            metricEl.style.background = color;
+        }
+        var datasets = [
+            {
+                label: 'Calibration',
+                data: a.calibration_bins.map(function(b) { return { x: b.avg_confidence, y: b.avg_accuracy }; }),
+                borderColor: color,
+                backgroundColor: color + '30',
+                showLine: true,
+                fill: false,
+                pointRadius: 5,
+                borderWidth: 2,
+                tension: 0.2,
+            },
+            {
+                label: 'Perfect',
+                data: [{x:0, y:0}, {x:1, y:1}],
+                borderColor: cc.tick,
+                borderDash: [6, 4],
+                showLine: true,
+                fill: false,
+                pointRadius: 0,
+                pointStyle: 'line',
+                borderWidth: 1.5,
+            }
+        ];
+        var ch = regChart(new Chart(el, {
+            type: 'scatter',
+            data: { datasets: datasets },
+            options: {
+                responsive: true,
+                aspectRatio: window.innerWidth < 768 ? 1 : 2,
+                scales: {
+                    x: { title: { display: true, text: 'Predicted Confidence', color: cc.label }, min: 0, max: 1, ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                    y: { title: { display: true, text: 'Observed Accuracy', color: cc.label }, min: 0, max: 1, ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                },
+                plugins: {
+                    legend: { labels: { color: cc.label, font: { size: 10 }, usePointStyle: true }, position: 'bottom' },
+                    tooltip: { enabled: false },
+                },
+                animation: false
+            }
+        }), ANIM_LTR);
+        attachCrosshair(ch);
+    });
+
+    // Per-agent accuracy-coverage curves (AURC)
+    agents.forEach(function(a, i) {
+        var el = document.getElementById('aurc_' + i);
+        if (!el || !a.aurc_data) return;
+        var cc = getChartColors();
+        var color = agentColor(a, i);
+        var covs = a.aurc_data.coverages;
+        var risks = a.aurc_data.risks;
+        var optRisks = a.aurc_data.optimal_risks;
+        var accuracies = risks.map(function(r) { return 1 - r; });
+        var idealAccuracies = optRisks.map(function(r) { return 1 - r; });
+        var overallAcc = accuracies[accuracies.length - 1];
+        // Populate header metric
+        var metricEl = document.getElementById('aurc_metric_' + i);
+        if (metricEl) {
+            var auroc = a.P_auroc != null ? a.P_auroc.toFixed(3) : '—';
+            metricEl.textContent = 'AUROC = ' + auroc;
+            metricEl.style.background = color;
+        }
+        var datasets = [
+            {
+                label: 'Model',
+                data: covs.map(function(c, j) { return { x: c, y: accuracies[j] }; }),
+                borderColor: color,
+                backgroundColor: color + '20',
+                showLine: true,
+                fill: '+1',
+                pointRadius: 0,
+                pointStyle: 'line',
+                borderWidth: 2,
+            },
+            {
+                label: 'Ideal',
+                data: covs.map(function(c, j) { return { x: c, y: idealAccuracies[j] }; }),
+                borderColor: cc.tick,
+                borderDash: [6, 4],
+                showLine: true,
+                fill: false,
+                pointRadius: 0,
+                pointStyle: 'line',
+                borderWidth: 1.5,
+            },
+            {
+                label: 'Random',
+                data: [{x: 0, y: overallAcc}, {x: 1, y: overallAcc}],
+                borderColor: '#ef4444',
+                borderDash: [3, 3],
+                showLine: true,
+                fill: false,
+                pointRadius: 0,
+                pointStyle: 'line',
+                borderWidth: 1.5,
+            }
+        ];
+        var ch = regChart(new Chart(el, {
+            type: 'scatter',
+            data: { datasets: datasets },
+            options: {
+                responsive: true,
+                aspectRatio: window.innerWidth < 768 ? 1 : 2,
+                scales: {
+                    x: { title: { display: true, text: 'Coverage', color: cc.label }, min: 0, max: 1, ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                    y: { title: { display: true, text: 'Accuracy', color: cc.label }, min: 0, max: 1, ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                },
+                plugins: {
+                    legend: { labels: { color: cc.label, font: { size: 10 }, usePointStyle: true }, position: 'bottom' },
+                    tooltip: { enabled: false },
+                },
+                animation: false
+            }
+        }), ANIM_LTR);
+        attachCrosshair(ch);
+    });
+}
+
+// ══════════════════════════════════════════
+//            CONSISTENCY
+// ══════════════════════════════════════════
+else if (dimension === 'Consistency') {
+    buildSubmetricBar('submetricBar', ['C_out', 'C_traj_d', 'C_traj_s', 'C_res']);
+
+    // CV Breakdown bar chart
+    (function() {
+        var cc = getChartColors();
+        var cvKeys = ['mean_time_cv', 'mean_cost_cv', 'mean_api_calls_cv', 'mean_actions_cv', 'mean_call_latency_cv'];
+        var cvNames = { 'mean_time_cv': 'Time', 'mean_cost_cv': 'Cost', 'mean_api_calls_cv': 'API Calls', 'mean_actions_cv': 'Actions', 'mean_call_latency_cv': 'Call Latency' };
+        var labels = agents.map(a => a.display_name.length > 20 ? a.display_name.slice(0,19)+'…' : a.display_name);
+        var datasets = cvKeys.map((k, ki) => ({
+            label: cvNames[k] || k,
+            data: agents.map(a => a.cv_breakdown ? a.cv_breakdown[k] : null),
+            backgroundColor: AGENT_COLORS[ki % AGENT_COLORS.length] + 'cc',
+            borderRadius: 3,
+        }));
+        var cvChart = new Chart(document.getElementById('cvBreakdown'), {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: { ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                    y: { ticks: { color: cc.label, font: { size: 10 } }, grid: { display: false } },
+                },
+                plugins: { legend: { labels: { color: cc.label } } },
+                animation: false
+            }
+        });
+        // Only show Time and Cost on first load; hide the rest
+        for (var hi = 2; hi < cvKeys.length; hi++) {
+            cvChart.getDatasetMeta(hi).hidden = true;
+        }
+        cvChart.update('none');
+        regChart(cvChart);
+    })();
+
+    // Task Outcome Consistency — per-agent cell grids
+    (function() {
+        var agentsWithTasks = agents.filter(function(a) { return a.task_outcomes && Object.keys(a.task_outcomes).length > 0; });
+        if (agentsWithTasks.length === 0) {
+            document.getElementById('heatmapInfo').textContent = 'No per-task data available';
+            return;
+        }
+        // Detect levels
+        var taskLevels = {};
+        agentsWithTasks.forEach(function(a) {
+            if (a.task_levels) {
+                Object.keys(a.task_levels).forEach(function(t) {
+                    if (a.task_levels[t] && String(a.task_levels[t]) !== '?') taskLevels[t] = String(a.task_levels[t]);
+                });
+            }
+        });
+        var hasLevels = Object.keys(taskLevels).length > 0;
+
+        // Sort agents by C_out_task descending
+        agentsWithTasks.sort(function(a, b) { return (b.C_out_task || 0) - (a.C_out_task || 0); });
+        document.getElementById('heatmapInfo').textContent = agentsWithTasks.length + ' agents';
+
+        var container = document.getElementById('heatmapContainer');
+
+        // Floating tooltip
+        var tooltip = document.createElement('div');
+        tooltip.style.cssText = 'position:fixed;padding:8px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;font-size:0.875rem;pointer-events:none;z-index:9999;opacity:0;transition:opacity 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.15);color:var(--text-primary);max-width:400px;white-space:nowrap;';
+        document.body.appendChild(tooltip);
+
+        // Convert success_rate to consistency: max(p, 1-p)
+        function toConsistency(val) {
+            if (val == null) return null;
+            return Math.max(val, 1 - val);
+        }
+
+        function heatColor(val) {
+            if (val == null) return 'rgba(128,128,128,0.2)';
+            // Map [0.5, 1.0] to [0, 1] for color interpolation
+            var t = Math.max(0, Math.min(1, (val - 0.5) * 2));
+            var r, g, b2;
+            if (t < 0.5) {
+                var p = t * 2;
+                r = Math.round(239 * (1 - p) + 245 * p);
+                g = Math.round(68 * (1 - p) + 158 * p);
+                b2 = Math.round(68 * (1 - p) + 11 * p);
+            } else {
+                var p = (t - 0.5) * 2;
+                r = Math.round(245 * (1 - p) + 16 * p);
+                g = Math.round(158 * (1 - p) + 185 * p);
+                b2 = Math.round(11 * (1 - p) + 129 * p);
+            }
+            return 'rgb(' + r + ',' + g + ',' + b2 + ')';
+        }
+
+        // Build sorted task list (numeric/alpha) and level boundaries
+        var taskSet = {};
+        agentsWithTasks.forEach(function(a) {
+            Object.keys(a.task_outcomes).forEach(function(t) { taskSet[t] = true; });
+        });
+        var allTaskIds;
+        var levelBounds = [];
+        if (hasLevels) {
+            var byLevelGlobal = {};
+            Object.keys(taskSet).forEach(function(t) {
+                var lv = taskLevels[t] || 'Unknown';
+                if (!byLevelGlobal[lv]) byLevelGlobal[lv] = [];
+                byLevelGlobal[lv].push(t);
+            });
+            var levelOrder = ['1','2','3'];
+            Object.keys(byLevelGlobal).forEach(function(lv) { if (levelOrder.indexOf(lv) === -1) levelOrder.push(lv); });
+            allTaskIds = [];
+            levelOrder.forEach(function(lv) {
+                if (!byLevelGlobal[lv]) return;
+                var tasks = byLevelGlobal[lv].sort(function(a, b) {
+                    var na = parseInt(a), nb = parseInt(b);
+                    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                    return a < b ? -1 : a > b ? 1 : 0;
+                });
+                levelBounds.push({ level: lv, start: allTaskIds.length, count: tasks.length });
+                allTaskIds = allTaskIds.concat(tasks);
+            });
+        } else {
+            allTaskIds = Object.keys(taskSet).sort(function(a, b) {
+                var na = parseInt(a), nb = parseInt(b);
+                if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                return a < b ? -1 : a > b ? 1 : 0;
+            });
+        }
+
+        // Compute dynamic cell size to fill available width
+        var nameColW = 180;
+        var gap = 2;
+        var nTasks = allTaskIds.length;
+        var nLevelGaps = hasLevels ? Math.max(0, levelBounds.length - 1) : 0;
+        var availW = container.offsetWidth - nameColW - 8;
+        var totalGapW = (nTasks - 1) * gap + nLevelGaps * 6;
+        var cellSize = Math.floor((availW - totalGapW) / nTasks);
+        var minCellSize = 10;
+        cellSize = Math.max(minCellSize, Math.min(cellSize, 22));
+
+        function makeCell(t, agentName) {
+            var cell = document.createElement('div');
+            cell.style.width = cellSize + 'px';
+            cell.style.height = cellSize + 'px';
+            cell.style.borderRadius = '2px';
+            cell.style.cursor = 'default';
+            cell.style.opacity = '0';
+            cell.style.flexShrink = '0';
+            cell.style.background = heatColor(t.val);
+            cell.addEventListener('mouseenter', function() {
+                tooltip.innerHTML = '<strong>' + t.id + '</strong><br>consistency: ' + (t.val != null ? t.val.toFixed(2) : 'n/a');
+                tooltip.style.opacity = '1';
+            });
+            cell.addEventListener('mousemove', function(e) {
+                tooltip.style.left = (e.clientX + 12) + 'px';
+                tooltip.style.top = (e.clientY + 12) + 'px';
+            });
+            cell.addEventListener('mouseleave', function() { tooltip.style.opacity = '0'; });
+            return cell;
+        }
+
+        // Legend
+        var legend = document.createElement('div');
+        legend.className = 'd-flex align-items-center gap-2 small text-muted mb-3';
+        legend.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border-radius:2px;background:#ef4444;"></span>0.5 (max disagreement) ' +
+            '<span style="display:inline-block;width:14px;height:14px;border-radius:2px;background:#f59e0b;margin-left:8px;"></span>0.75 ' +
+            '<span style="display:inline-block;width:14px;height:14px;border-radius:2px;background:#10b981;margin-left:8px;"></span>1.0 (full agreement)';
+        container.appendChild(legend);
+
+        // Level header row (if levels)
+        if (hasLevels) {
+            var levelRow = document.createElement('div');
+            levelRow.style.cssText = 'display:flex;align-items:center;margin-bottom:4px;';
+            var nameSpacer = document.createElement('div');
+            nameSpacer.style.cssText = 'min-width:' + nameColW + 'px;flex-shrink:0;';
+            levelRow.appendChild(nameSpacer);
+            var levelCellsRow = document.createElement('div');
+            levelCellsRow.style.cssText = 'display:flex;align-items:center;gap:' + gap + 'px;';
+            levelBounds.forEach(function(lb, idx) {
+                if (idx > 0) {
+                    var spacer = document.createElement('div');
+                    spacer.style.cssText = 'width:6px;flex-shrink:0;';
+                    levelCellsRow.appendChild(spacer);
+                }
+                var groupW = lb.count * cellSize + (lb.count - 1) * gap;
+                var lbl = document.createElement('div');
+                lbl.style.cssText = 'display:flex;justify-content:center;width:' + groupW + 'px;font-size:0.75rem;font-weight:600;color:var(--text-secondary);flex-shrink:0;';
+                lbl.textContent = 'Level ' + lb.level;
+                levelCellsRow.appendChild(lbl);
+            });
+            levelRow.appendChild(levelCellsRow);
+            container.appendChild(levelRow);
+        }
+
+        var duration = 1200;
+        function runRowReveal(cells) {
+            var start = null;
+            var total = cells.length;
+            function step(ts) {
+                if (!start) start = ts;
+                var t = Math.min((ts - start) / duration, 1);
+                var p = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+                var revealed = p * total;
+                for (var i = 0; i < total; i++) {
+                    if (i < revealed - 1) cells[i].style.opacity = '1';
+                    else if (i < revealed) cells[i].style.opacity = String(revealed - i);
+                }
+                if (t < 1) requestAnimationFrame(step);
+                else { for (var j = 0; j < total; j++) cells[j].style.opacity = '1'; }
+            }
+            requestAnimationFrame(step);
+        }
+
+        function observeRow(rowEl, cells) {
+            var triggered = false;
+            function tryReveal() {
+                if (triggered) return;
+                triggered = true;
+                runRowReveal(cells);
+            }
+            var rect = rowEl.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                tryReveal();
+                return;
+            }
+            var obs = new IntersectionObserver(function(entries) {
+                if (entries[0].isIntersecting) { obs.disconnect(); tryReveal(); }
+            }, { threshold: 0.1 });
+            obs.observe(rowEl);
+        }
+
+        agentsWithTasks.forEach(function(a) {
+            var outcomes = a.task_outcomes;
+
+            // Row: name + cells on one line
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;margin-bottom:3px;';
+
+            // Name label
+            var nameEl = document.createElement('div');
+            nameEl.style.cssText = 'min-width:' + nameColW + 'px;width:' + nameColW + 'px;flex-shrink:0;font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;';
+            nameEl.innerHTML = providerLogoHtml(a.provider) + '<strong>' + a.display_name + '</strong>';
+            row.appendChild(nameEl);
+
+            // Cells container
+            var cellsWrap = document.createElement('div');
+            cellsWrap.style.cssText = 'display:flex;align-items:center;gap:' + gap + 'px;flex-shrink:0;';
+
+            var rowCells = [];
+            if (hasLevels) {
+                levelBounds.forEach(function(lb, idx) {
+                    if (idx > 0) {
+                        var spacer = document.createElement('div');
+                        spacer.style.cssText = 'width:6px;flex-shrink:0;';
+                        cellsWrap.appendChild(spacer);
+                    }
+                    for (var i = lb.start; i < lb.start + lb.count; i++) {
+                        var tid = allTaskIds[i];
+                        var cell = makeCell({ id: tid, val: outcomes[tid] != null ? toConsistency(outcomes[tid]) : null }, a.display_name);
+                        cellsWrap.appendChild(cell);
+                        rowCells.push(cell);
+                    }
+                });
+            } else {
+                allTaskIds.forEach(function(tid) {
+                    var cell = makeCell({ id: tid, val: outcomes[tid] != null ? toConsistency(outcomes[tid]) : null }, a.display_name);
+                    cellsWrap.appendChild(cell);
+                    rowCells.push(cell);
+                });
+            }
+
+            row.appendChild(cellsWrap);
+            container.appendChild(row);
+
+            // Per-row scroll-triggered animation
+            observeRow(row, rowCells);
+        });
+    })();
+}
+
+// ══════════════════════════════════════════
+//            ROBUSTNESS
+// ══════════════════════════════════════════
+else if (dimension === 'Robustness') {
+    buildSubmetricBar('submetricBar', ['R_fault', 'R_struct', 'R_prompt']);
+
+    // Baseline vs perturbed grouped bar
+    (function() {
+        var cc = getChartColors();
+        var labels = agents.map(a => a.display_name.length > 20 ? a.display_name.slice(0,19)+'…' : a.display_name);
+        regChart(new Chart(document.getElementById('robustnessCompare'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Baseline', data: agents.map(a => a.baseline_acc), backgroundColor: '#3b82f6cc', borderRadius: 3 },
+                    { label: 'Fault-Perturbed', data: agents.map(a => a.fault_acc), backgroundColor: '#ef4444cc', borderRadius: 3 },
+                    { label: 'Structure-Perturbed', data: agents.map(a => a.struct_acc), backgroundColor: '#f59e0bcc', borderRadius: 3 },
+                    { label: 'Prompt-Perturbed', data: agents.map(a => a.prompt_acc), backgroundColor: '#06b6d4cc', borderRadius: 3 },
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: { min: 0, max: 1, ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                    y: { ticks: { color: cc.label, font: { size: 10 } }, grid: { display: false } },
+                },
+                plugins: { legend: { labels: { color: cc.label } } },
+                animation: false
+            }
+        }));
+    })();
+}
+
+// ══════════════════════════════════════════
+//              SAFETY
+// ══════════════════════════════════════════
+else if (dimension === 'Safety') {
+    buildSubmetricBar('submetricBar', ['S_harm', 'S_comp', 'S_safety']);
+
+    // Per-constraint compliance
+    (function() {
+        var cc = getChartColors();
+        // Collect all constraint keys
+        var constraintKeys = new Set();
+        agents.forEach(a => { if (a.per_constraint) Object.keys(a.per_constraint).forEach(k => constraintKeys.add(k)); });
+        constraintKeys = Array.from(constraintKeys);
+        var labels = agents.map(a => a.display_name.length > 20 ? a.display_name.slice(0,19)+'…' : a.display_name);
+        var datasets = constraintKeys.map((k, ki) => ({
+            label: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+            data: agents.map(a => a.per_constraint ? a.per_constraint[k] : null),
+            backgroundColor: AGENT_COLORS[ki % AGENT_COLORS.length] + 'cc',
+            borderRadius: 3,
+        }));
+        regChart(new Chart(document.getElementById('constraintBar'), {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: { min: 0, max: 1, ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                    y: { ticks: { color: cc.label, font: { size: 10 } }, grid: { display: false } },
+                },
+                plugins: { legend: { labels: { color: cc.label }, position: 'bottom' } },
+                animation: false
+            }
+        }));
+    })();
+}
+
+// Theme change handler
+window.addEventListener('theme-changed', function() {
+    var c = getChartColors();
+    allCharts.forEach(function(ch) {
+        Object.values(ch.options.scales || {}).forEach(function(s) {
+            if (s.ticks) s.ticks.color = c.tick;
+            if (s.grid) s.grid.color = c.grid;
+            if (s.title) s.title.color = c.label;
+        });
+        if (ch.options.plugins && ch.options.plugins.legend && ch.options.plugins.legend.labels) {
+            ch.options.plugins.legend.labels.color = c.label;
+        }
+        ch.update();
+    });
+});
+
+// ── Dimension leaderboard sorting ──
+(function() {
+    var _agents = {{ leaderboard_agents | tojson }};
+    var _dim = {{ dimension | tojson }};
+    var _dimMetrics = {{ leaderboard_dim_metrics[dimension] | tojson }};
+    var _benchName = {{ benchmark | tojson }};
+    var _provLogos = {
+        openai: ['{{ url_for("reliability.static", filename="openai.svg") }}', false],
+        anthropic: ['{{ url_for("reliability.static", filename="anthropic.svg") }}', false],
+        google: ['{{ url_for("reliability.static", filename="gemini.svg") }}', false]
+    };
+
+    function metricColor(val) {
+        if (val == null) return '#475569';
+        var v = Math.max(0, Math.min(1, val));
+        var R = [239,68,68], O = [245,158,11], G = [16,185,129];
+        var r, g, b;
+        if (v <= 0.5) { r = R[0]; g = R[1]; b = R[2]; }
+        else if (v <= 0.75) {
+            var t = (v - 0.5) / 0.25;
+            r = Math.round(R[0] + (O[0]-R[0])*t);
+            g = Math.round(R[1] + (O[1]-R[1])*t);
+            b = Math.round(R[2] + (O[2]-R[2])*t);
+        } else {
+            var t = (v - 0.75) / 0.25;
+            r = Math.round(O[0] + (G[0]-O[0])*t);
+            g = Math.round(O[1] + (G[1]-O[1])*t);
+            b = Math.round(O[2] + (G[2]-O[2])*t);
+        }
+        return 'rgb('+r+','+g+','+b+')';
+    }
+
+    function badge(val) {
+        if (val == null) return '<span class="text-muted">\u2014</span>';
+        return '<span class="badge-metric" style="background:' + metricColor(val) + '">' + val.toFixed(2) + '</span>';
+    }
+
+    function agentLink(agentName) {
+        return '{{ url_for("reliability.agent_benchmark", agent_name="__AGENT__", bench="__BENCH__") }}'
+            .replace('__AGENT__', encodeURIComponent(agentName))
+            .replace('__BENCH__', encodeURIComponent(_benchName));
+    }
+
+    function renderLeaderboard(data) {
+        var tbody = document.getElementById('dimLeaderboardBody');
+        var html = '';
+        data.forEach(function(a, i) {
+            html += '<tr>';
+            html += '<td>' + (i + 1) + '</td>';
+            var logoHtml = '';
+            var pl = _provLogos[a.provider];
+            if (pl) {
+                logoHtml = '<img src="' + pl[0] + '" class="provider-logo' + (pl[1] ? ' logo-invert' : '') + '" alt="' + (a.provider||'') + '">';
+            }
+            html += '<td class="text-nowrap"><a href="' + agentLink(a.display_name) + '" class="text-decoration-none">' + logoHtml + a.display_name + '</a></td>';
+            var acc = a.accuracy != null ? (a.accuracy * 100).toFixed(1) + '%' : '\u2014';
+            html += '<td><span class="badge-metric">' + acc + '</span></td>';
+            html += '<td class="leaderboard-dim-col">' + badge(a['dim_' + _dim]) + '</td>';
+            _dimMetrics.forEach(function(m) {
+                html += '<td>' + badge(a[m]) + '</td>';
+            });
+            var ov = a.overall_reliability;
+            if (ov != null) {
+                html += '<td class="leaderboard-dim-col"><span class="badge-metric badge-overall">' + ov.toFixed(2) + '</span></td>';
+            } else {
+                html += '<td class="leaderboard-dim-col"></td>';
+            }
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
+
+    var _sortCol = 'dim_' + _dim;
+    var _sortAsc = false;
+
+    function sortData(data, col, asc) {
+        return data.slice().sort(function(a, b) {
+            var va = col === '_rank' ? null : a[col], vb = col === '_rank' ? null : b[col];
+            if (col === 'display_name') {
+                return asc ? (va||'').localeCompare(vb||'') : (vb||'').localeCompare(va||'');
+            }
+            if (va == null && vb == null) return 0;
+            if (va == null) return 1;
+            if (vb == null) return -1;
+            return asc ? va - vb : vb - va;
+        });
+    }
+
+    function updateSortIndicators() {
+        document.querySelectorAll('.leaderboard-table .sortable').forEach(function(th) {
+            th.classList.remove('sort-asc', 'sort-desc');
+            if (th.dataset.sort === _sortCol) {
+                th.classList.add(_sortAsc ? 'sort-asc' : 'sort-desc');
+            }
+        });
+    }
+
+    document.querySelectorAll('.leaderboard-table .sortable').forEach(function(th) {
+        th.addEventListener('click', function() {
+            var col = this.dataset.sort;
+            if (_sortCol === col) {
+                _sortAsc = !_sortAsc;
+            } else {
+                _sortCol = col;
+                _sortAsc = col === 'display_name';
+            }
+            renderLeaderboard(sortData(_agents, _sortCol, _sortAsc));
+            updateSortIndicators();
+        });
+    });
+
+    updateSortIndicators();
+})();
+</script>
+{% endblock %}

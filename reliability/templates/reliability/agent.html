@@ -1,0 +1,72 @@
+{% extends "reliability/base.html" %}
+{% block title %}{{ name }} — Agent Detail{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Agent: <span class="text-primary">{% set _pl = provider_logos.get(agent_data[0].provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ agent_data[0].provider }}">{% endif %}{{ name }}</span></h2>
+
+<div class="row g-4 mb-4">
+    <!-- Radar -->
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0">Reliability Dimensions by Benchmark</h5></div>
+            <div class="card-body d-flex align-items-center justify-content-center" style="overflow:hidden;">
+                <canvas id="agentRadar"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary cards per benchmark -->
+    <div class="col-lg-7">
+        <div class="row g-3">
+            {% for rec in agent_data %}
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <a href="{{ url_for('reliability.benchmark', name=rec.benchmark) }}" class="text-decoration-none">{{ bench_display(rec.benchmark) }}</a>
+                        <a href="{{ url_for('reliability.agent_benchmark', agent_name=name, bench=rec.benchmark) }}" class="btn btn-outline-primary btn-sm float-end">Detail &rarr;</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Accuracy</span>
+                            <span class="badge-metric">{{ "%.1f"|format((rec.accuracy or 0) * 100) }}%</span>
+                        </div>
+                        {% for dim in dimensions %}
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small">{{ dim }}</span>
+                            {% set val = rec.get("dim_" ~ dim, None) %}
+                            {% if val is not none %}
+                            <span class="badge-metric small" style="background: {{ metric_color(val) }}">{{ "%.2f"|format(val) }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </div>
+                        {% endfor %}
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-semibold">Overall</span>
+                            <span class="badge-metric badge-overall">{{ "%.2f"|format(rec.overall_reliability or 0) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const radarData = {{ radar_data | safe }};
+function makeOpts() {
+    var c = getChartColors();
+    return {
+        responsive: true, maintainAspectRatio: false,
+        scales: { r: { beginAtZero: true, max: 1, ticks: { stepSize: 0.2, display: false }, grid: { color: c.grid }, pointLabels: { color: c.label, font: { size: 13 } } } },
+        plugins: { legend: { position: 'bottom', labels: { color: c.label, padding: 15 } } }
+    };
+}
+var agentRadar = new Chart(document.getElementById('agentRadar'), { type: 'radar', data: radarData, options: Object.assign(makeOpts(), {animation: false}) });
+animateOnScroll(agentRadar, ANIM_GROW);
+window.addEventListener('theme-changed', function() { agentRadar.options = Object.assign(makeOpts(), {animation: false}); agentRadar.update(); });
+</script>
+{% endblock %}

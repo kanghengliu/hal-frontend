@@ -1,0 +1,62 @@
+{% extends "reliability/base.html" %}
+{% block title %}Key Findings — HAL Reliability{% endblock %}
+
+{% block content %}
+<div class="hero-section mb-5">
+    <h1 class="hero-title">Key Findings</h1>
+    <p class="hero-subtitle">
+        Data-driven insights from evaluating AI agents on reliability — what we found when we looked beyond accuracy.
+    </p>
+</div>
+
+<!-- Findings cards -->
+<div class="row g-4">
+    {% for f in findings %}
+    <div class="col-lg-6">
+        <div class="card finding-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-3">
+                    <div class="finding-icon-wrap me-3" style="background: {{ f.color }}15; color: {{ f.color }};">
+                        <i class="{{ f.icon }}"></i>
+                    </div>
+                    <div>
+                        <h5 class="finding-title mb-1">{{ f.title }}</h5>
+                        <p class="finding-body mb-2">{{ f.body | safe }}</p>
+                        <p class="finding-detail text-muted mb-0"><small>{{ f.detail }}</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if recommendations %}
+<h2 class="mt-5 mb-4" style="font-family: 'Source Serif 4', Georgia, serif; font-weight: 700;">Recommendations</h2>
+<div class="row g-4">
+    {% for r in recommendations %}
+    <div class="col-lg-6">
+        <div class="card finding-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-3">
+                    <div class="finding-icon-wrap me-3" style="background: {{ r.color }}15; color: {{ r.color }};">
+                        <i class="{{ r.icon }}"></i>
+                    </div>
+                    <div>
+                        <h5 class="finding-title mb-1">{{ r.title }}</h5>
+                        <p class="finding-body mb-2">{{ r.body | safe }}</p>
+                        <p class="finding-detail text-muted mb-0"><small>{{ r.detail }}</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="mt-5 mb-3 text-center">
+    <a href="{{ url_for('reliability.index') }}" class="btn btn-outline-primary btn-sm me-2"><i class="fa-solid fa-arrow-left me-1"></i>Back to Overview</a>
+    <a href="{{ url_for('reliability.methodology') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-book me-1"></i>Methodology</a>
+</div>
+{% endblock %}

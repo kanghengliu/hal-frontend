@@ -1,0 +1,682 @@
+{% extends "reliability/base.html" %}
+{% block title %}{{ agent_name }} on {{ bench_display(benchmark) }} — Reliability Dashboard{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a href="{{ url_for('reliability.index') }}">Overview</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('reliability.benchmark', name=benchmark) }}">{{ bench_display(benchmark) }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('reliability.agent', name=agent_name) }}">{{ agent_name }}</a></li>
+        <li class="breadcrumb-item active">Detail</li>
+    </ol>
+</nav>
+
+<div class="d-flex align-items-start mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="mb-0">{% set _pl = provider_logos.get(provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ provider }}">{% endif %}{{ agent_name }}</h2>
+        <span class="text-muted">on <a href="{{ url_for('reliability.benchmark', name=benchmark) }}" class="text-decoration-none">{{ bench_display(benchmark) }}</a></span>
+    </div>
+    <div class="d-flex flex-wrap gap-2 ms-auto">
+        <div class="hero-stat-card">
+            <div class="hero-stat-number">{{ "%.1f"|format((metrics.accuracy or 0) * 100) }}%</div>
+            <div class="hero-stat-label">Accuracy</div>
+        </div>
+        <div class="hero-stat-card">
+            <div class="hero-stat-number">{{ "%.2f"|format(metrics.overall_reliability or 0) }}</div>
+            <div class="hero-stat-label">Overall Reliability</div>
+        </div>
+        <div class="hero-stat-card">
+            <div class="hero-stat-number">#{{ rank }}</div>
+            <div class="hero-stat-label">of {{ total_agents }} agents</div>
+        </div>
+        {% for dim in dimensions %}
+        <div class="hero-stat-card">
+            <div class="hero-stat-number" style="font-size:1.3rem;">{{ "%.2f"|format(metrics[dim]._dim or 0) }}</div>
+            <div class="hero-stat-label">{{ dim }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% set metric_short = {
+    'C_out': 'Outc', 'C_traj_d': 'Traj-D', 'C_traj_s': 'Traj-S', 'C_res': 'Res',
+    'P_cal': 'Cal', 'P_auroc': 'AUROC', 'P_brier': 'Brier',
+    'R_fault': 'Fault', 'R_struct': 'Struct', 'R_prompt': 'Prompt',
+    'S_harm': 'Harm', 'S_comp': 'Comp', 'S_safety': 'Safety',
+    'A_rate': 'Rate', 'A_prec': 'Prec', 'A_rec': 'Rec', 'A_sel': 'Sel', 'A_cal': 'Cal'
+} %}
+<!-- Radar + Metrics -->
+<div class="row g-3 mb-3 align-items-start">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body d-flex align-items-center justify-content-center p-2">
+                <canvas id="radarChart" style="max-height:270px;"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle small">
+                        <thead>
+                            <tr>
+                                <th>Dimension</th>
+                                <th class="text-center">Agg</th>
+                                <th>Sub-metrics</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dim, cols in dim_metrics.items() %}
+                            <tr>
+                                <td class="fw-semibold text-nowrap"><a href="{{ url_for('reliability.dimension_detail', bench=benchmark, dim=dim|lower) }}" class="text-decoration-none"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }}</a></td>
+                                <td class="text-center">
+                                    {% set agg = metrics[dim]._dim %}
+                                    {% if agg is not none %}
+                                    <span class="badge-metric" style="background: {{ metric_color(agg) }}">{{ "%.3f"|format(agg) }}</span>
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                <td>
+                                    <div style="display:grid; grid-template-columns: repeat({{ cols|length }}, 1fr); gap: 4px 16px;">
+                                    {% for c in cols %}
+                                        <div class="text-center">
+                                            <div class="text-muted small" style="font-size:.7rem;">{{ metric_short.get(c, c) }}</div>
+                                            {% set val = metrics[dim][c] %}
+                                            {% if val is not none %}
+                                            <span class="badge-metric" style="background: {{ metric_color(val) }}">{{ "%.3f"|format(val) }}</span>
+                                            {% else %}<span class="text-muted">—</span>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Per-task Consistency Heatmap -->
+{% if detail.Consistency and detail.Consistency.task_outcomes %}
+<div class="card mb-4">
+    <div class="card-header"><h6 class="mb-0"><i class="fa-solid fa-arrows-rotate me-1"></i>Per-Task Outcome Consistency</h6></div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">Each cell represents a task. Color shows outcome consistency across runs. Hover to see task ID.</p>
+        <div id="consistencyHeatmap"></div>
+    </div>
+</div>
+{% endif %}
+
+<!-- KDE Distribution Charts -->
+{% if detail.Consistency and detail.Consistency.task_outcomes %}
+{% set has_nonzero_costs = detail.Consistency and detail.Consistency.task_costs and detail.Consistency.task_costs.values() | select('gt', 0) | list | length > 0 %}
+{% set has_nonzero_times = detail.Consistency and detail.Consistency.task_times and detail.Consistency.task_times.values() | select('gt', 0) | list | length > 0 %}
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0"><i class="fa-solid fa-chart-area me-1"></i>Consistency Distribution</h6></div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">KDE of per-task outcome consistency. Peaks at 0 or 1 indicate polarized behavior.</p>
+                <canvas id="consistencyKde"></canvas>
+            </div>
+        </div>
+    </div>
+    {% if has_nonzero_costs %}
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0"><i class="fa-solid fa-chart-area me-1"></i>Per-Task Cost Distribution</h6></div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">KDE of mean cost per task (averaged across runs).</p>
+                <canvas id="costKde"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if has_nonzero_times %}
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0"><i class="fa-solid fa-chart-area me-1"></i>Per-Task Time Distribution</h6></div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">KDE of mean execution time per task (averaged across runs).</p>
+                <canvas id="timeKde"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Predictability Charts -->
+{% if detail.Predictability and detail.Predictability.calibration_bins %}
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0"><i class="fa-solid fa-chart-line me-1"></i>Calibration Curve</h6></div>
+            <div class="card-body">
+                <canvas id="calibrationChart"></canvas>
+            </div>
+        </div>
+    </div>
+    {% if detail.Predictability.aurc_data %}
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0"><i class="fa-solid fa-chart-area me-1"></i>Risk-Coverage (AURC)</h6></div>
+            <div class="card-body">
+                <canvas id="aurcChart"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0"><i class="fa-solid fa-chart-area me-1"></i>Confidence Distribution</h6></div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">Distribution of expressed confidence values across tasks.</p>
+                <canvas id="confidenceKde"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const detail = {{ detail_json | safe }};
+var c = getChartColors();
+const providerColor = '{{ provider_color }}';
+
+// ── Radar ──
+(function() {
+    const dims = {{ dimensions | tojson }};
+    const values = [{% for dim in dimensions %}{{ metrics[dim]._dim or 0 }}{{ ',' if not loop.last }}{% endfor %}];
+    new Chart(document.getElementById('radarChart'), {
+        type: 'radar',
+        data: {
+            labels: dims,
+            datasets: [{
+                label: '{{ agent_name }}',
+                data: values,
+                borderColor: providerColor,
+                backgroundColor: providerColor + '20',
+                pointRadius: 4,
+            }]
+        },
+        options: {
+            scales: { r: { beginAtZero: true, max: 1, ticks: { stepSize: 0.2, display: false }, grid: { color: c.grid }, pointLabels: { color: c.label, font: { size: 12 } } } },
+            plugins: { legend: { display: false } }
+        }
+    });
+})();
+
+// ── Consistency Heatmap ──
+{% if detail.Consistency and detail.Consistency.task_outcomes %}
+(function() {
+    var outcomes = detail.Consistency.task_outcomes;
+    var levels = detail.Consistency.task_levels || {};
+    var container = document.getElementById('consistencyHeatmap');
+
+    // Convert success_rate to consistency: max(p, 1-p)
+    // Both always-succeed and always-fail are fully consistent
+    var consistency = {};
+    Object.keys(outcomes).forEach(function(tid) {
+        var p = outcomes[tid];
+        consistency[tid] = Math.max(p, 1 - p);
+    });
+
+    // Determine if we have meaningful levels (not all '?')
+    var hasLevels = false;
+    var byLevel = {};
+    Object.keys(consistency).forEach(function(tid) {
+        var lvl = levels[tid] || '?';
+        if (lvl !== '?') hasLevels = true;
+        if (!byLevel[lvl]) byLevel[lvl] = [];
+        byLevel[lvl].push({ id: tid, val: consistency[tid] });
+    });
+
+    // Floating tooltip
+    var tooltip = document.createElement('div');
+    tooltip.style.cssText = 'position:fixed;padding:8px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;font-size:0.875rem;pointer-events:none;z-index:9999;opacity:0;transition:opacity 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.15);color:var(--text-primary);max-width:400px;white-space:nowrap;';
+    document.body.appendChild(tooltip);
+
+    function heatColor(val) {
+        // Map [0.5, 1.0] to [0, 1] for color interpolation
+        var t = Math.max(0, Math.min(1, (val - 0.5) * 2));
+        var r, g, b2;
+        if (t < 0.5) {
+            var p = t * 2;
+            r = Math.round(239 * (1 - p) + 245 * p);
+            g = Math.round(68 * (1 - p) + 158 * p);
+            b2 = Math.round(68 * (1 - p) + 11 * p);
+        } else {
+            var p = (t - 0.5) * 2;
+            r = Math.round(245 * (1 - p) + 16 * p);
+            g = Math.round(158 * (1 - p) + 185 * p);
+            b2 = Math.round(11 * (1 - p) + 129 * p);
+        }
+        return 'rgb(' + r + ',' + g + ',' + b2 + ')';
+    }
+
+    function makeCell(t) {
+        var cell = document.createElement('div');
+        cell.style.width = '14px';
+        cell.style.height = '14px';
+        cell.style.borderRadius = '2px';
+        cell.style.cursor = 'default';
+        cell.style.opacity = '0';
+        cell.style.background = heatColor(t.val);
+        cell.addEventListener('mouseenter', function(e) {
+            tooltip.innerHTML = '<strong>' + t.id + '</strong><br>consistency: ' + t.val.toFixed(2);
+            tooltip.style.opacity = '1';
+        });
+        cell.addEventListener('mousemove', function(e) {
+            tooltip.style.left = (e.clientX + 12) + 'px';
+            tooltip.style.top = (e.clientY + 12) + 'px';
+        });
+        cell.addEventListener('mouseleave', function() {
+            tooltip.style.opacity = '0';
+        });
+        return cell;
+    }
+
+    // Collect all cell wrappers for animation
+    var allWraps = [];
+
+    if (hasLevels) {
+        var sortedLevels = Object.keys(byLevel).sort();
+        sortedLevels.forEach(function(lvl) {
+            var tasks = byLevel[lvl].sort(function(a, b) { return b.val - a.val; });
+            var section = document.createElement('div');
+            section.className = 'mb-3';
+            var label = document.createElement('div');
+            label.className = 'small fw-semibold mb-1';
+            label.textContent = 'Level ' + lvl + ' (' + tasks.length + ' tasks)';
+            section.appendChild(label);
+            var wrap = document.createElement('div');
+            wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:2px;';
+            tasks.forEach(function(t) { wrap.appendChild(makeCell(t)); });
+            section.appendChild(wrap);
+            container.appendChild(section);
+            allWraps.push(wrap);
+        });
+    } else {
+        var allTasks = Object.keys(outcomes).map(function(tid) { return { id: tid, val: outcomes[tid] }; });
+        allTasks.sort(function(a, b) { return b.val - a.val; });
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:2px;';
+        allTasks.forEach(function(t) { wrap.appendChild(makeCell(t)); });
+        container.appendChild(wrap);
+        allWraps.push(wrap);
+    }
+
+    // Legend
+    var legend = document.createElement('div');
+    legend.className = 'mt-2 d-flex align-items-center gap-2 small text-muted';
+    legend.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border-radius:2px;background:#ef4444;"></span>0.5 (max disagreement) ' +
+        '<span style="display:inline-block;width:14px;height:14px;border-radius:2px;background:#f59e0b;margin-left:8px;"></span>0.75 ' +
+        '<span style="display:inline-block;width:14px;height:14px;border-radius:2px;background:#10b981;margin-left:8px;"></span>1.0 (full agreement)';
+    container.appendChild(legend);
+
+    // Collect all cells across all wraps for staggered opacity reveal
+    var allCells = [];
+    allWraps.forEach(function(w) {
+        for (var i = 0; i < w.children.length; i++) allCells.push(w.children[i]);
+    });
+
+    // Opacity reveal animation on scroll
+    var duration = 1200;
+    function runReveal() {
+        var start = null;
+        var total = allCells.length;
+        function step(ts) {
+            if (!start) start = ts;
+            var t = Math.min((ts - start) / duration, 1);
+            var p = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            // Reveal cells progressively: each cell fades in over a small window
+            var revealed = p * total;
+            for (var i = 0; i < total; i++) {
+                if (i < revealed - 1) {
+                    allCells[i].style.opacity = '1';
+                } else if (i < revealed) {
+                    allCells[i].style.opacity = String(revealed - i);
+                }
+            }
+            if (t < 1) requestAnimationFrame(step);
+            else { for (var j = 0; j < total; j++) allCells[j].style.opacity = '1'; }
+        }
+        requestAnimationFrame(step);
+    }
+    var threshold = 0.85;
+    var rect = container.getBoundingClientRect();
+    var visibleH = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+    if (rect.height > 0 && visibleH / rect.height >= threshold) {
+        runReveal();
+    } else {
+        var obs = new IntersectionObserver(function(entries) {
+            if (entries[0].isIntersecting) { obs.disconnect(); runReveal(); }
+        }, { threshold: threshold });
+        obs.observe(container);
+    }
+})();
+{% endif %}
+
+// ── KDE helper ──
+function gaussianKDE(values, nPoints, bandwidth) {
+    if (!values.length) return { x: [], y: [] };
+    var min = Math.min.apply(null, values), max = Math.max.apply(null, values);
+    // Pad range slightly
+    var pad = (max - min) * 0.05 || 0.1;
+    min -= pad; max += pad;
+    if (min < 0) min = 0;
+    if (max > 1) max = 1;
+    var step = (max - min) / (nPoints - 1);
+    var n = values.length;
+    var h = bandwidth || (1.06 * Math.sqrt(values.reduce(function(s, v) { var m = values.reduce(function(a,b){return a+b},0)/n; return s + (v-m)*(v-m); }, 0) / n) * Math.pow(n, -0.2));
+    if (h < 0.01) h = 0.05;
+    var xs = [], ys = [];
+    for (var i = 0; i < nPoints; i++) {
+        var x = min + i * step;
+        var density = 0;
+        for (var j = 0; j < n; j++) {
+            var z = (x - values[j]) / h;
+            density += Math.exp(-0.5 * z * z);
+        }
+        density /= (n * h * Math.sqrt(2 * Math.PI));
+        xs.push(x);
+        ys.push(density);
+    }
+    return { x: xs, y: ys };
+}
+
+// ── Consistency KDE ──
+{% if detail.Consistency and detail.Consistency.task_outcomes %}
+(function() {
+    var outcomes = detail.Consistency.task_outcomes;
+    var vals = Object.keys(outcomes).map(function(k) { var p = outcomes[k]; return Math.max(p, 1 - p); });
+    var kde = gaussianKDE(vals, 80, 0.06);
+    var pts = kde.x.map(function(x, i) { return { x: x, y: kde.y[i] }; });
+    animateOnScroll(new Chart(document.getElementById('consistencyKde'), {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                data: pts,
+                showLine: true,
+                borderColor: providerColor,
+                backgroundColor: providerColor + '20',
+                fill: true,
+                pointRadius: 0,
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            scales: {
+                x: { min: 0.5, max: 1, title: { display: true, text: 'Consistency Score', color: c.label }, ticks: { color: c.tick }, grid: { color: c.grid } },
+                y: { title: { display: true, text: 'Density', color: c.label }, ticks: { color: c.tick }, grid: { color: c.grid } },
+            },
+            plugins: { legend: { display: false } }
+        }
+    }), ANIM_LTR);
+})();
+{% endif %}
+
+// ── Confidence KDE ──
+{% if detail.Predictability and detail.Predictability.calibration_bins %}
+(function() {
+    // Reconstruct approximate per-task confidence values from bins
+    var bins = detail.Predictability.calibration_bins;
+    var confVals = [];
+    bins.forEach(function(b) {
+        // Each bin has count tasks at avg_confidence
+        for (var i = 0; i < b.count; i++) {
+            confVals.push(b.avg_confidence);
+        }
+    });
+    if (confVals.length > 0) {
+        var kde = gaussianKDE(confVals, 80, 0.06);
+        var pts = kde.x.map(function(x, i) { return { x: x, y: kde.y[i] }; });
+        animateOnScroll(new Chart(document.getElementById('confidenceKde'), {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    data: pts,
+                    showLine: true,
+                    borderColor: providerColor,
+                    backgroundColor: providerColor + '20',
+                    fill: true,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                animation: false,
+                scales: {
+                    x: { min: 0, max: 1, title: { display: true, text: 'Confidence', color: c.label }, ticks: { color: c.tick }, grid: { color: c.grid } },
+                    y: { title: { display: true, text: 'Density', color: c.label }, ticks: { color: c.tick }, grid: { color: c.grid } },
+                },
+                plugins: { legend: { display: false } }
+            }
+        }), ANIM_LTR);
+    }
+})();
+{% endif %}
+
+// ── KDE helper (unbounded, for cost/time) ──
+function gaussianKDEUnbounded(values, nPoints, bandwidth) {
+    if (!values.length) return { x: [], y: [] };
+    var min = Math.min.apply(null, values), max = Math.max.apply(null, values);
+    var pad = (max - min) * 0.1 || 1;
+    min = Math.max(0, min - pad); max += pad;
+    var step = (max - min) / (nPoints - 1);
+    var n = values.length;
+    var h = bandwidth || (1.06 * Math.sqrt(values.reduce(function(s, v) { var m = values.reduce(function(a,b){return a+b},0)/n; return s + (v-m)*(v-m); }, 0) / n) * Math.pow(n, -0.2));
+    if (h < 1e-6) h = (max - min) / 10;
+    var xs = [], ys = [];
+    for (var i = 0; i < nPoints; i++) {
+        var x = min + i * step;
+        var density = 0;
+        for (var j = 0; j < n; j++) {
+            var z = (x - values[j]) / h;
+            density += Math.exp(-0.5 * z * z);
+        }
+        density /= (n * h * Math.sqrt(2 * Math.PI));
+        xs.push(x);
+        ys.push(density);
+    }
+    return { x: xs, y: ys };
+}
+
+// ── Cost KDE ──
+{% if detail.Consistency and detail.Consistency.task_costs and detail.Consistency.task_costs.values() | select('gt', 0) | list | length > 0 %}
+(function() {
+    var taskCosts = detail.Consistency.task_costs;
+    var vals = Object.keys(taskCosts).map(function(k) { return taskCosts[k]; }).filter(function(v) { return v != null && v > 0; });
+    if (vals.length > 2) {
+        var kde = gaussianKDEUnbounded(vals, 80);
+        var pts = kde.x.map(function(x, i) { return { x: x, y: kde.y[i] }; });
+        animateOnScroll(new Chart(document.getElementById('costKde'), {
+            type: 'scatter',
+            data: { datasets: [{ data: pts, showLine: true, borderColor: providerColor, backgroundColor: providerColor + '20', fill: true, pointRadius: 0, borderWidth: 2 }] },
+            options: {
+                responsive: true,
+                animation: false,
+                scales: {
+                    x: { title: { display: true, text: 'Cost ($)', color: c.label }, ticks: { color: c.tick }, grid: { color: c.grid } },
+                    y: { title: { display: true, text: 'Density', color: c.label }, ticks: { color: c.tick }, grid: { color: c.grid } },
+                },
+                plugins: { legend: { display: false } }
+            }
+        }), ANIM_LTR);
+    }
+})();
+{% endif %}
+
+// ── Time KDE ──
+{% if detail.Consistency and detail.Consistency.task_times and detail.Consistency.task_times.values() | select('gt', 0) | list | length > 0 %}
+(function() {
+    var taskTimes = detail.Consistency.task_times;
+    var vals = Object.keys(taskTimes).map(function(k) { return taskTimes[k]; }).filter(function(v) { return v != null && v > 0; });
+    if (vals.length > 2) {
+        var kde = gaussianKDEUnbounded(vals, 80);
+        var pts = kde.x.map(function(x, i) { return { x: x, y: kde.y[i] }; });
+        animateOnScroll(new Chart(document.getElementById('timeKde'), {
+            type: 'scatter',
+            data: { datasets: [{ data: pts, showLine: true, borderColor: providerColor, backgroundColor: providerColor + '20', fill: true, pointRadius: 0, borderWidth: 2 }] },
+            options: {
+                responsive: true,
+                animation: false,
+                scales: {
+                    x: { title: { display: true, text: 'Time (s)', color: c.label }, ticks: { color: c.tick }, grid: { color: c.grid } },
+                    y: { title: { display: true, text: 'Density', color: c.label }, ticks: { color: c.tick }, grid: { color: c.grid } },
+                },
+                plugins: { legend: { display: false } }
+            }
+        }), ANIM_LTR);
+    }
+})();
+{% endif %}
+
+// ── Calibration Curve ──
+{% if detail.Predictability and detail.Predictability.calibration_bins %}
+(function() {
+    var bins = detail.Predictability.calibration_bins;
+    var color = providerColor;
+    var datasets = [
+        {
+            label: 'Calibration',
+            data: bins.map(function(b) { return { x: b.avg_confidence, y: b.avg_accuracy }; }),
+            borderColor: color,
+            backgroundColor: color + '30',
+            showLine: true,
+            fill: false,
+            pointRadius: 5,
+            borderWidth: 2,
+            tension: 0.2,
+        },
+        {
+            label: 'Perfect',
+            data: [{x:0, y:0}, {x:1, y:1}],
+            borderColor: c.tick,
+            borderDash: [6, 4],
+            showLine: true,
+            fill: false,
+            pointRadius: 0,
+            pointStyle: 'line',
+            borderWidth: 1.5,
+        }
+    ];
+    animateOnScroll(new Chart(document.getElementById('calibrationChart'), {
+        type: 'scatter',
+        data: { datasets: datasets },
+        options: {
+            responsive: true,
+            aspectRatio: window.innerWidth < 768 ? 1 : 2,
+            animation: false,
+            scales: {
+                x: { title: { display: true, text: 'Predicted Confidence', color: c.label }, min: 0, max: 1, ticks: { color: c.tick }, grid: { color: c.grid } },
+                y: { title: { display: true, text: 'Observed Accuracy', color: c.label }, min: 0, max: 1, ticks: { color: c.tick }, grid: { color: c.grid } },
+            },
+            plugins: {
+                legend: { labels: { color: c.label, font: { size: 10 }, usePointStyle: true }, position: 'bottom' },
+                tooltip: { enabled: false },
+            },
+        }
+    }), ANIM_LTR);
+})();
+{% endif %}
+
+// ── AURC (Accuracy-Coverage) ──
+{% if detail.Predictability and detail.Predictability.aurc_data %}
+(function() {
+    var aurc = detail.Predictability.aurc_data;
+    if (aurc.coverages && aurc.risks) {
+        var color = providerColor;
+        var covs = aurc.coverages;
+        var risks = aurc.risks;
+        var accuracies = risks.map(function(r) { return 1 - r; });
+        var overallAcc = accuracies[accuracies.length - 1];
+        var datasets = [
+            {
+                label: 'Model',
+                data: covs.map(function(cov, j) { return { x: cov, y: accuracies[j] }; }),
+                borderColor: color,
+                backgroundColor: color + '20',
+                showLine: true,
+                fill: '+1',
+                pointRadius: 0,
+                pointStyle: 'line',
+                borderWidth: 2,
+            },
+        ];
+        if (aurc.optimal_risks) {
+            var idealAccuracies = aurc.optimal_risks.map(function(r) { return 1 - r; });
+            datasets.push({
+                label: 'Ideal',
+                data: covs.map(function(cov, j) { return { x: cov, y: idealAccuracies[j] }; }),
+                borderColor: c.tick,
+                borderDash: [6, 4],
+                showLine: true,
+                fill: false,
+                pointRadius: 0,
+                pointStyle: 'line',
+                borderWidth: 1.5,
+            });
+        }
+        datasets.push({
+            label: 'Random',
+            data: [{x: 0, y: overallAcc}, {x: 1, y: overallAcc}],
+            borderColor: '#ef4444',
+            borderDash: [3, 3],
+            showLine: true,
+            fill: false,
+            pointRadius: 0,
+            pointStyle: 'line',
+            borderWidth: 1.5,
+        });
+        animateOnScroll(new Chart(document.getElementById('aurcChart'), {
+            type: 'scatter',
+            data: { datasets: datasets },
+            options: {
+                responsive: true,
+                aspectRatio: window.innerWidth < 768 ? 1 : 2,
+                animation: false,
+                scales: {
+                    x: { title: { display: true, text: 'Coverage', color: c.label }, min: 0, max: 1, ticks: { color: c.tick }, grid: { color: c.grid } },
+                    y: { title: { display: true, text: 'Accuracy', color: c.label }, min: 0, max: 1, ticks: { color: c.tick }, grid: { color: c.grid } },
+                },
+                plugins: {
+                    legend: { labels: { color: c.label, font: { size: 10 }, usePointStyle: true }, position: 'bottom' },
+                    tooltip: { enabled: false },
+                },
+            }
+        }), ANIM_LTR);
+    }
+})();
+{% endif %}
+
+// ── Theme change: update all chart colors ──
+window.addEventListener('theme-changed', function() {
+    c = getChartColors();
+    Object.values(Chart.instances).forEach(function(ch) {
+        if (!ch || !ch.options || !ch.options.scales) return;
+        Object.keys(ch.options.scales).forEach(function(axis) {
+            var s = ch.options.scales[axis];
+            if (s.ticks) s.ticks.color = c.tick;
+            if (s.grid) s.grid.color = c.grid;
+            if (s.title) s.title.color = c.label;
+            if (s.pointLabels) s.pointLabels.color = c.label;
+        });
+        if (ch.options.plugins && ch.options.plugins.legend && ch.options.plugins.legend.labels) {
+            ch.options.plugins.legend.labels.color = c.label;
+        }
+        ch.update();
+    });
+});
+</script>
+{% endblock %}

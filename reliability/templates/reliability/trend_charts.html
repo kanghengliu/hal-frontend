@@ -1,0 +1,375 @@
+{# Reusable trend scatter plots: reliability vs date and vs accuracy #}
+{# Expects: trend_charts (JSON string), provider_colors (JSON string), provider_shapes (JSON string) #}
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">Reliability Trends</h5>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if trend_by_bench is defined %}
+            <select id="trendBenchSelect" class="form-select form-select-sm" style="width: auto;">
+            </select>
+            {% endif %}
+            <select id="trendDimSelect" class="form-select form-select-sm" style="width: auto;">
+            </select>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div style="height: 360px;"><canvas id="trendAccDateChart"></canvas></div>
+            </div>
+            <div class="col-md-4">
+                <div style="height: 360px;"><canvas id="trendDateChart"></canvas></div>
+            </div>
+            <div class="col-md-4">
+                <div style="height: 360px;"><canvas id="trendAccChart"></canvas></div>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-4 text-center" id="trendAccDateStats"></div>
+            <div class="col-md-4 text-center" id="trendDateStats"></div>
+            <div class="col-md-4 text-center" id="trendAccStats"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+window._trendChartsData = {{ trend_charts | safe }};
+window._trendProvColors = {{ provider_colors | safe }};
+window._trendProvShapes = {{ provider_shapes | safe }};
+{% if trend_by_bench is defined %}
+window._trendByBench = {{ trend_by_bench | safe }};
+{% endif %}
+{% if name is defined %}
+window._trendBenchContext = {{ name | tojson }};
+{% endif %}
+{% if bench_display_to_raw is defined %}
+window._benchDisplayToRaw = {{ bench_display_to_raw | safe }};
+{% endif %}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var trendCharts = window._trendChartsData;
+    var trendByBench = window._trendByBench || null;
+    const provColors = window._trendProvColors;
+    const provShapes = window._trendProvShapes;
+    const shapeMap = { circle: 'circle', rectRot: 'rectRot', triangle: 'triangle', cross: 'cross' };
+    const provDisplayName = { openai: 'OpenAI', anthropic: 'Anthropic', google: 'Google' };
+
+    // ── Client-side linear regression for trend-line refitting ──
+    var REF_TS = new Date('2024-01-01').getTime(), YEAR_MS = 365.25*24*3600*1000;
+    function dateToYears(d) { return (new Date(d).getTime() - REF_TS) / YEAR_MS; }
+    function yearsToDate(y) { return new Date(REF_TS + y * YEAR_MS).toISOString().slice(0,10); }
+    function _ncdf(x) {
+        var t = 1/(1+0.2316419*Math.abs(x));
+        var p = 0.3989422804*Math.exp(-x*x/2)*t*(0.3193815+t*(-0.3565638+t*(1.7814779+t*(-1.8212560+t*1.3302744))));
+        return x > 0 ? 1-p : p;
+    }
+    function linreg(xs, ys) {
+        var n = xs.length; if (n < 3) return null;
+        var sx=0,sy=0,sxx=0,sxy=0,syy=0;
+        for (var i=0;i<n;i++){sx+=xs[i];sy+=ys[i];sxx+=xs[i]*xs[i];sxy+=xs[i]*ys[i];syy+=ys[i]*ys[i];}
+        var d=n*sxx-sx*sx; if(!d) return null;
+        var slope=(n*sxy-sx*sy)/d, intercept=(sy-slope*sx)/n;
+        var r=(sxy-sx*sy/n)/Math.sqrt((sxx-sx*sx/n)*(syy-sy*sy/n));
+        if(isNaN(r)) r=0;
+        var p=1;
+        if(Math.abs(r)<1&&n>2){var t=r*Math.sqrt((n-2)/(1-r*r));p=2*(1-_ncdf(Math.abs(t)));}
+        return {slope:slope,intercept:intercept,r:r,p:p};
+    }
+    function _chip(label, value) {
+        return '<span class="trend-stat"><span class="trend-stat-label">' + label + '</span><span class="trend-stat-value">' + value + '</span></span>';
+    }
+    function renderStats(el, s, isDate) {
+        var html = _chip('r', (s.r >= 0 ? '+' : '') + s.r.toFixed(2));
+        if (isDate) html += _chip('slope', (s.slope >= 0 ? '+' : '') + s.slope.toFixed(2) + '/yr');
+        else html += _chip('slope', (s.slope >= 0 ? '+' : '') + s.slope.toFixed(2));
+        html += _chip('p', s.p.toFixed(2));
+        el.innerHTML = '<span class="trend-stats">' + html + '</span>';
+    }
+    function initStats(elId, data, isDate) {
+        var el = document.getElementById(elId);
+        if (!el) return;
+        if (!data) { el._stats = null; return; }
+        el._stats = { r: data.r || 0, slope: isDate ? (data.slope_per_year || 0) : (data.slope || 0), p: data.p || 0 };
+    }
+    function _ease(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3) / 2; }
+    var REFIT_DUR = 500;
+    function refitTrend(chart, statsElId, isDate) {
+        var xs = [], ys = [];
+        chart.data.datasets.forEach(function(ds, i) {
+            if (ds._isTrend || chart.getDatasetMeta(i).hidden) return;
+            ds.data.forEach(function(pt) {
+                if (pt.y == null) return;
+                var xv = isDate ? dateToYears(pt.x) : pt.x;
+                if (!isNaN(xv)) { xs.push(xv); ys.push(pt.y); }
+            });
+        });
+        var tIdx = -1;
+        chart.data.datasets.forEach(function(ds, i) { if (ds._isTrend) tIdx = i; });
+        var reg = linreg(xs, ys);
+        if (tIdx >= 0) {
+            if (reg) {
+                var xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
+                chart.data.datasets[tIdx].data = isDate
+                    ? [{x: yearsToDate(xMin), y: reg.intercept + reg.slope * xMin}, {x: yearsToDate(xMax), y: reg.intercept + reg.slope * xMax}]
+                    : [{x: xMin, y: reg.intercept + reg.slope * xMin}, {x: xMax, y: reg.intercept + reg.slope * xMax}];
+                chart.getDatasetMeta(tIdx).hidden = false;
+            } else { chart.data.datasets[tIdx].data = []; }
+        }
+        // Animate trend line transition
+        chart.options.animation = { duration: REFIT_DUR, easing: 'easeInOutCubic' };
+        chart.update();
+        chart.options.animation = false;
+        // Animate stats numbers
+        var el = document.getElementById(statsElId);
+        if (!el) return;
+        if (!reg) { el.innerHTML = ''; el._stats = null; return; }
+        var newS = { r: Math.round(reg.r * 100) / 100, slope: Math.round(reg.slope * 100) / 100, p: reg.p };
+        var oldS = el._stats;
+        el._stats = { r: newS.r, slope: newS.slope, p: newS.p };
+        if (!oldS) { renderStats(el, newS, isDate); return; }
+        if (el._af) cancelAnimationFrame(el._af);
+        var t0 = performance.now();
+        (function tick(now) {
+            var t = Math.min(1, (now - t0) / REFIT_DUR), e = _ease(t);
+            renderStats(el, {
+                r: oldS.r + (newS.r - oldS.r) * e,
+                slope: oldS.slope + (newS.slope - oldS.slope) * e,
+                p: oldS.p + (newS.p - oldS.p) * e
+            }, isDate);
+            if (t < 1) el._af = requestAnimationFrame(tick);
+        })(performance.now());
+    }
+    function trendLegendClick(statsElId, isDate) {
+        return function(e, legendItem, legend) {
+            var chart=legend.chart, idx=legendItem.datasetIndex;
+            if(chart.data.datasets[idx]._isTrend) return;
+            if(chart.isDatasetVisible(idx)){chart.hide(idx);legendItem.hidden=true;}
+            else{chart.show(idx);legendItem.hidden=false;}
+            refitTrend(chart, statsElId, isDate);
+        };
+    }
+
+    // Benchmark selector (index page only)
+    var benchSel = document.getElementById('trendBenchSelect');
+    if (benchSel && trendByBench) {
+        Object.keys(trendByBench).forEach(function(b) {
+            var opt = document.createElement('option');
+            opt.value = b;
+            opt.textContent = b;
+            benchSel.appendChild(opt);
+        });
+        benchSel.addEventListener('change', function() {
+            trendCharts = trendByBench[benchSel.value];
+            populateDimSelect();
+            render(sel.value);
+        });
+    }
+
+    const sel = document.getElementById('trendDimSelect');
+
+    function populateDimSelect() {
+        var dimNames = Object.keys(trendCharts);
+        sel.innerHTML = '';
+        dimNames.forEach(function(d) {
+            var opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            sel.appendChild(opt);
+        });
+    }
+
+    var dimNames = Object.keys(trendCharts);
+    if (dimNames.length === 0) return;
+    populateDimSelect();
+
+    var dateChart = null, accDateChart = null, accChart = null;
+
+    function buildDatasets(data) {
+        // Group points by provider
+        var byProv = {};
+        data.points.forEach(function(p) {
+            if (!byProv[p.provider]) byProv[p.provider] = [];
+            byProv[p.provider].push(p);
+        });
+        var datasets = [];
+        Object.keys(byProv).forEach(function(prov) {
+            datasets.push({
+                label: provDisplayName[prov] || prov.charAt(0).toUpperCase() + prov.slice(1),
+                data: byProv[prov].map(function(p) { return { x: p.x, y: p.y, label: p.label, benchmark: p.benchmark }; }),
+                backgroundColor: provColors[prov] || '#888',
+                borderColor: 'rgba(255,255,255,0.7)',
+                pointStyle: shapeMap[provShapes[prov]] || 'circle',
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBorderWidth: 1.5,
+                showLine: false,
+            });
+        });
+        // Trend line
+        if (data.trend_line) {
+            datasets.push({
+                label: 'Trend',
+                _isTrend: true,
+                data: data.trend_line.map(function(p) { return { x: p.x, y: p.y }; }),
+                borderColor: getChartColors().label,
+                borderWidth: 2,
+                pointRadius: 0,
+                pointStyle: 'line',
+                showLine: true,
+                fill: false,
+            });
+        }
+        return datasets;
+    }
+
+    var benchContext = window._trendBenchContext || null;
+    var benchDisplayToRaw = window._benchDisplayToRaw || {};
+    function onPointClick(evt, elements, chart) {
+        if (!elements.length) return;
+        var el = elements[0];
+        var pt = chart.data.datasets[el.datasetIndex].data[el.index];
+        if (!pt || !pt.label) return;
+        var bench = pt.benchmark || benchContext;
+        if (!bench && benchSel) {
+            var selVal = benchSel.value;
+            if (selVal && selVal !== 'All Benchmarks') bench = benchDisplayToRaw[selVal] || null;
+        }
+        if (bench) {
+            window.location.href = '{{ url_for("reliability.agent_benchmark", agent_name="__AGENT__", bench="__BENCH__") }}'
+                .replace('__AGENT__', encodeURIComponent(pt.label))
+                .replace('__BENCH__', encodeURIComponent(bench));
+        } else {
+            window.location.href = '{{ url_for("reliability.agent", name="__AGENT__") }}'
+                .replace('__AGENT__', encodeURIComponent(pt.label));
+        }
+    }
+
+    function statsHtml(data, isDate) {
+        if (!data) return '';
+        var html = _chip('r', (data.r >= 0 ? '+' : '') + data.r);
+        if (isDate) html += _chip('slope', (data.slope_per_year >= 0 ? '+' : '') + data.slope_per_year + '/yr');
+        else html += _chip('slope', (data.slope >= 0 ? '+' : '') + data.slope);
+        html += _chip('p', data.p.toFixed(2));
+        return '<span class="trend-stats">' + html + '</span>';
+    }
+
+    function render(dimName) {
+        var d = trendCharts[dimName];
+        if (dateChart) dateChart.destroy();
+        if (accDateChart) accDateChart.destroy();
+        if (accChart) accChart.destroy();
+
+        var cc = getChartColors();
+
+        // Reliability vs Date chart
+        if (d.vs_date) {
+            var ds = buildDatasets(d.vs_date);
+            dateChart = new Chart(document.getElementById('trendDateChart'), {
+                type: 'scatter',
+                data: { datasets: ds },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    clip: false,
+                    onClick: onPointClick,
+                    onHover: function(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                    scales: {
+                        x: { type: 'time', time: { unit: 'month', tooltipFormat: 'yyyy-MM' },
+                             title: { display: true, text: 'Release Date', color: cc.label },
+                             ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                        y: { min: -0.02, max: 1.02, title: { display: true, text: dimName, color: cc.label },
+                             ticks: { color: cc.tick, stepSize: 0.2 }, grid: { color: cc.grid } },
+                    },
+                    plugins: {
+                        legend: { onClick: trendLegendClick('trendDateStats', true), labels: { color: cc.label, usePointStyle: true } },
+                        tooltip: { callbacks: { label: function(ctx) {
+                            var p = ctx.raw;
+                            return (p.label || '') + ': ' + (p.y != null ? p.y.toFixed(3) : '—');
+                        }}}
+                    }
+                }
+            });
+            animateOnScroll(dateChart, ANIM_LTR);
+        }
+        document.getElementById('trendDateStats').innerHTML = statsHtml(d.vs_date, true);
+        initStats('trendDateStats', d.vs_date, true);
+
+        // Accuracy vs Date chart
+        if (d.acc_over_time) {
+            var dsAcc = buildDatasets(d.acc_over_time);
+            accDateChart = new Chart(document.getElementById('trendAccDateChart'), {
+                type: 'scatter',
+                data: { datasets: dsAcc },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    clip: false,
+                    onClick: onPointClick,
+                    onHover: function(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                    scales: {
+                        x: { type: 'time', time: { unit: 'month', tooltipFormat: 'yyyy-MM' },
+                             title: { display: true, text: 'Release Date', color: cc.label },
+                             ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                        y: { min: -0.02, max: 1.02, title: { display: true, text: 'Accuracy', color: cc.label },
+                             ticks: { color: cc.tick, stepSize: 0.2 }, grid: { color: cc.grid } },
+                    },
+                    plugins: {
+                        legend: { onClick: trendLegendClick('trendAccDateStats', true), labels: { color: cc.label, usePointStyle: true } },
+                        tooltip: { callbacks: { label: function(ctx) {
+                            var p = ctx.raw;
+                            return (p.label || '') + ': ' + (p.y != null ? p.y.toFixed(3) : '—');
+                        }}}
+                    }
+                }
+            });
+            animateOnScroll(accDateChart, ANIM_LTR);
+        }
+        document.getElementById('trendAccDateStats').innerHTML = statsHtml(d.acc_over_time, true);
+        initStats('trendAccDateStats', d.acc_over_time, true);
+
+        // Reliability vs Accuracy chart
+        if (d.vs_accuracy) {
+            var ds2 = buildDatasets(d.vs_accuracy);
+            accChart = new Chart(document.getElementById('trendAccChart'), {
+                type: 'scatter',
+                data: { datasets: ds2 },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    clip: false,
+                    onClick: onPointClick,
+                    onHover: function(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                    scales: {
+                        x: { min: -0.02, max: 1.02, title: { display: true, text: 'Accuracy', color: cc.label },
+                             ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                        y: { min: -0.02, max: 1.02, title: { display: true, text: dimName, color: cc.label },
+                             ticks: { color: cc.tick, stepSize: 0.2 }, grid: { color: cc.grid } },
+                    },
+                    plugins: {
+                        legend: { onClick: trendLegendClick('trendAccStats', false), labels: { color: cc.label, usePointStyle: true } },
+                        tooltip: { callbacks: { label: function(ctx) {
+                            var p = ctx.raw;
+                            return (p.label || '') + ': ' + (p.y != null ? p.y.toFixed(3) : '—');
+                        }}}
+                    }
+                }
+            });
+            animateOnScroll(accChart, ANIM_LTR);
+        }
+        document.getElementById('trendAccStats').innerHTML = statsHtml(d.vs_accuracy, false);
+        initStats('trendAccStats', d.vs_accuracy, false);
+    }
+
+    sel.addEventListener('change', function() { render(sel.value); });
+    render(dimNames[0]);
+
+    window.addEventListener('theme-changed', function() {
+        render(sel.value);
+    });
+});
+</script>

@@ -1079,6 +1079,9 @@ def create_app():
         
         return render_template('press.html', news_articles=news_articles)
 
+    from reliability import reliability_bp
+    app.register_blueprint(reliability_bp, url_prefix='/reliability')
+
     return app
 
 

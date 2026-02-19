@@ -1,0 +1,177 @@
+{% extends "reliability/base.html" %}
+{% block title %}Compare τ-bench — Reliability Dashboard{% endblock %}
+
+{% block content %}
+<h2 class="mb-2">Compare: <span class="text-primary">τ-bench (airline, original)</span> vs <span class="text-primary">τ-bench (airline, clean)</span></h2>
+<p class="text-muted mb-4">Side-by-side comparison of all reliability metrics on the original 50-task dataset versus the curated 26-task clean subset. The clean version excludes tasks with identified grading and specification issues and is used in the main results.</p>
+
+<!-- Accuracy & Overall Reliability -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Accuracy</h6></div>
+            <div class="card-body"><canvas id="cmp_Accuracy"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0">Overall Reliability</h6></div>
+            <div class="card-body"><canvas id="cmp_Overall_Reliability"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- Dimension Charts -->
+<div class="row g-4 mb-4">
+    {% for dim in dimensions %}
+    <div class="col-md-6 col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h6 class="mb-0"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }}</h6></div>
+            <div class="card-body"><canvas id="cmp_{{ dim }}"></canvas></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% set metric_short = {
+    'C_out': 'Outc', 'C_traj_d': 'Traj-D', 'C_traj_s': 'Traj-S', 'C_res': 'Res',
+    'P_cal': 'Cal', 'P_auroc': 'AUROC', 'P_brier': 'Brier',
+    'R_fault': 'Fault', 'R_struct': 'Struct', 'R_prompt': 'Prompt',
+    'S_harm': 'Harm', 'S_comp': 'Comp', 'S_safety': 'Safety'
+} %}
+{% set metric_tip = {
+    'C_out': 'Outcome consistency across runs', 'C_traj_d': 'Trajectory consistency (distributional)', 'C_traj_s': 'Trajectory consistency (sequential)', 'C_res': 'Resource usage consistency',
+    'P_cal': 'Confidence calibration', 'P_auroc': 'Confidence discrimination (AUROC)', 'P_brier': 'Brier score (inverted)',
+    'R_fault': 'Fault injection tolerance', 'R_struct': 'Structural perturbation robustness', 'R_prompt': 'Prompt rewording robustness',
+    'S_harm': 'Harm avoidance', 'S_comp': 'Constraint compliance', 'S_safety': 'Overall safety score'
+} %}
+<!-- Detailed Metrics Table -->
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">All Metrics (Original / Clean)</h5></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle leaderboard-table small">
+                <thead>
+                    <tr class="leaderboard-group-row">
+                        <th rowspan="3">Agent</th>
+                        <th colspan="2" class="leaderboard-group-header">Accuracy</th>
+                        {% for dim, cols in dim_metrics.items() %}
+                        <th colspan="{{ cols|length * 2 }}" class="leaderboard-group-header"><i class="{{ dim_icons[dim] }} me-1"></i>{{ dim }}</th>
+                        {% endfor %}
+                        <th colspan="2" class="leaderboard-group-header">Overall</th>
+                    </tr>
+                    <tr class="leaderboard-sub-row">
+                        <th colspan="2" class="leaderboard-dim-col"></th>
+                        {% for dim, cols in dim_metrics.items() %}
+                            {% for c in cols %}
+                            <th colspan="2" class="text-center{% if loop.first %} leaderboard-dim-col{% endif %}"><span title="{{ metric_tip.get(c, c) }}">{{ metric_short.get(c, c) }}</span></th>
+                            {% endfor %}
+                        {% endfor %}
+                        <th colspan="2" class="leaderboard-dim-col"></th>
+                    </tr>
+                    <tr class="leaderboard-sub-row">
+                        <th class="text-center text-muted leaderboard-dim-col">Orig</th>
+                        <th class="text-center text-muted">Clean</th>
+                        {% for dim, cols in dim_metrics.items() %}
+                            {% for c in cols %}
+                            <th class="text-center text-muted{% if loop.first %} leaderboard-dim-col{% endif %}">Orig</th>
+                            <th class="text-center text-muted">Clean</th>
+                            {% endfor %}
+                        {% endfor %}
+                        <th class="text-center text-muted leaderboard-dim-col">Orig</th>
+                        <th class="text-center text-muted">Clean</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in agents %}
+                    <tr>
+                        <td class="text-nowrap">{% set _pl = provider_logos.get(a.provider) %}{% if _pl %}<img src="{{ url_for('reliability.static', filename=_pl[0]) }}" class="provider-logo{% if _pl[1] %} logo-invert{% endif %}" alt="{{ a.provider }}">{% endif %}{{ a.display_name }}</td>
+                        {% set vf = a.get('accuracy_full', None) %}
+                        {% set vc = a.get('accuracy_clean', None) %}
+                        <td class="text-center leaderboard-dim-col">{% if vf is not none %}<span class="badge-metric" style="background: {{ metric_color(vf) }}">{{ "%.2f"|format(vf) }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        <td class="text-center">{% if vc is not none %}<span class="badge-metric" style="background: {{ metric_color(vc) }}">{{ "%.2f"|format(vc) }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        {% for dim, cols in dim_metrics.items() %}
+                            {% for c in cols %}
+                            {% set vf = a.get(c ~ '_full', None) %}
+                            {% set vc = a.get(c ~ '_clean', None) %}
+                            <td class="text-center{% if loop.first %} leaderboard-dim-col{% endif %}">{% if vf is not none %}<span class="badge-metric" style="background: {{ metric_color(vf) }}">{{ "%.2f"|format(vf) }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                            <td class="text-center">{% if vc is not none %}<span class="badge-metric" style="background: {{ metric_color(vc) }}">{{ "%.2f"|format(vc) }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                            {% endfor %}
+                        {% endfor %}
+                        {% set vf = a.get('overall_full', None) %}
+                        {% set vc = a.get('overall_clean', None) %}
+                        <td class="text-center leaderboard-dim-col">{% if vf is not none %}<span class="badge-metric badge-overall" style="background: {{ metric_color(vf) }}">{{ "%.2f"|format(vf) }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        <td class="text-center">{% if vc is not none %}<span class="badge-metric badge-overall" style="background: {{ metric_color(vc) }}">{{ "%.2f"|format(vc) }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const compareData = {{ compare_data | safe }};
+const chartKeys = ["Accuracy", "Overall Reliability", ...{{ dimensions | tojson }}];
+const canvasIds = {
+    "Accuracy": "cmp_Accuracy",
+    "Overall Reliability": "cmp_Overall_Reliability",
+    {% for dim in dimensions %}"{{ dim }}": "cmp_{{ dim }}",{% endfor %}
+};
+var cmpCharts = [];
+
+chartKeys.forEach(key => {
+    const d = compareData[key];
+    if (!d) return;
+    const el = document.getElementById(canvasIds[key]);
+    if (!el) return;
+    var chart = new Chart(el, {
+        type: 'bar',
+        data: {
+            labels: d.labels.map(l => l.length > 22 ? l.slice(0, 21) + '…' : l),
+            datasets: [
+                {
+                    label: 'Original (50 tasks)',
+                    data: d.full,
+                    backgroundColor: '#2563eb',
+                    borderRadius: 5,
+                },
+                {
+                    label: 'Clean (26 tasks)',
+                    data: d.clean,
+                    backgroundColor: '#059669',
+                    borderRadius: 5,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            scales: {
+                x: { min: 0, max: 1, ticks: { color: getChartColors().tick }, grid: { color: getChartColors().grid } },
+                y: { ticks: { color: getChartColors().label, font: { size: 11 } }, grid: { display: false } },
+            },
+            plugins: {
+                legend: { display: true, labels: { color: getChartColors().label } }
+            },
+            animation: false
+        }
+    });
+    animateOnScroll(chart, ANIM_GROW);
+    cmpCharts.push(chart);
+});
+
+window.addEventListener('theme-changed', function() {
+    var c = getChartColors();
+    cmpCharts.forEach(function(ch) {
+        ch.options.scales.x.ticks.color = c.tick;
+        ch.options.scales.x.grid.color = c.grid;
+        ch.options.scales.y.ticks.color = c.label;
+        ch.options.plugins.legend.labels.color = c.label;
+        ch.update();
+    });
+});
+</script>
+{% endblock %}
