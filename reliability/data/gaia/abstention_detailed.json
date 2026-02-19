@@ -1,0 +1,462 @@
+{
+  "gaia_generalist_gpt_4_turbo": {
+    "agent": "gaia_generalist_gpt_4_turbo",
+    "display_name": "GPT-4 Turbo",
+    "provider": "OpenAI",
+    "accuracy": 0.2,
+    "A_rate": 0.3090909090909091,
+    "A_prec": 0.954248366013072,
+    "A_rec": 0.3686868686868687,
+    "A_sel": 0.26900584795321636,
+    "A_cal": 0.4808080808080808,
+    "confusion_matrix": {
+      "abstained_and_failed": 146,
+      "abstained_and_succeeded": 7,
+      "proceeded_and_failed": 250,
+      "proceeded_and_succeeded": 92
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 338,
+        "success_rate": 0.2692307692307692
+      },
+      "inability": {
+        "count": 145,
+        "success_rate": 0.04827586206896552
+      },
+      "refusal": {
+        "count": 7,
+        "success_rate": 0.0
+      },
+      "uncertainty": {
+        "count": 5,
+        "success_rate": 0.2
+      }
+    },
+    "n_tasks": 495,
+    "n_abstained": 153
+  },
+  "gaia_generalist_gpt_4o_mini": {
+    "agent": "gaia_generalist_gpt_4o_mini",
+    "display_name": "GPT-4o mini",
+    "provider": "OpenAI",
+    "accuracy": 0.2202020202020202,
+    "A_rate": 0.6659919028340081,
+    "A_prec": 0.8145896656534954,
+    "A_rec": 0.6961038961038961,
+    "A_sel": 0.2909090909090909,
+    "A_cal": 0.6396761133603239,
+    "confusion_matrix": {
+      "abstained_and_failed": 268,
+      "abstained_and_succeeded": 61,
+      "proceeded_and_failed": 117,
+      "proceeded_and_succeeded": 48
+    },
+    "type_breakdown": {
+      "inability": {
+        "count": 327,
+        "success_rate": 0.18654434250764526
+      },
+      "refusal": {
+        "count": 2,
+        "success_rate": 0.0
+      },
+      "none": {
+        "count": 164,
+        "success_rate": 0.2865853658536585
+      },
+      "uncertainty": {
+        "count": 1,
+        "success_rate": 1.0
+      }
+    },
+    "n_tasks": 494,
+    "n_abstained": 329
+  },
+  "gaia_generalist_gpt_o1": {
+    "agent": "gaia_generalist_gpt_o1",
+    "display_name": "o1",
+    "provider": "OpenAI",
+    "accuracy": 0.3474747474747475,
+    "A_rate": 0.09292929292929293,
+    "A_prec": 0.9130434782608695,
+    "A_rec": 0.13003095975232198,
+    "A_sel": 0.3741648106904232,
+    "A_cal": 0.42424242424242425,
+    "confusion_matrix": {
+      "abstained_and_failed": 42,
+      "abstained_and_succeeded": 4,
+      "proceeded_and_failed": 281,
+      "proceeded_and_succeeded": 168
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 447,
+        "success_rate": 0.37583892617449666
+      },
+      "inability": {
+        "count": 32,
+        "success_rate": 0.09375
+      },
+      "refusal": {
+        "count": 14,
+        "success_rate": 0.07142857142857142
+      },
+      "uncertainty": {
+        "count": 1,
+        "success_rate": 0.0
+      },
+      "clarification": {
+        "count": 1,
+        "success_rate": 0.0
+      }
+    },
+    "n_tasks": 495,
+    "n_abstained": 46
+  },
+  "gaia_generalist_gpt_5_2": {
+    "agent": "gaia_generalist_gpt_5_2",
+    "display_name": "GPT 5.2",
+    "provider": "OpenAI",
+    "accuracy": 0.298989898989899,
+    "A_rate": 0.23625254582484725,
+    "A_prec": 0.8793103448275862,
+    "A_rec": 0.29737609329446063,
+    "A_sel": 0.35733333333333334,
+    "A_cal": 0.48065173116089616,
+    "confusion_matrix": {
+      "abstained_and_failed": 102,
+      "abstained_and_succeeded": 14,
+      "proceeded_and_failed": 241,
+      "proceeded_and_succeeded": 134
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 371,
+        "success_rate": 0.3611859838274933
+      },
+      "inability": {
+        "count": 110,
+        "success_rate": 0.11818181818181818
+      },
+      "refusal": {
+        "count": 3,
+        "success_rate": 0.0
+      },
+      "uncertainty": {
+        "count": 6,
+        "success_rate": 0.16666666666666666
+      },
+      "clarification": {
+        "count": 1,
+        "success_rate": 0.0
+      }
+    },
+    "n_tasks": 491,
+    "n_abstained": 116
+  },
+  "gaia_generalist_gpt_5_2_medium": {
+    "agent": "gaia_generalist_gpt_5_2_medium",
+    "display_name": "GPT 5.2 (medium)",
+    "provider": "OpenAI",
+    "accuracy": 0.4262626262626263,
+    "A_rate": 0.07083333333333333,
+    "A_prec": 0.8529411764705882,
+    "A_rec": 0.10780669144981413,
+    "A_sel": 0.4618834080717489,
+    "A_cal": 0.4895833333333333,
+    "confusion_matrix": {
+      "abstained_and_failed": 29,
+      "abstained_and_succeeded": 5,
+      "proceeded_and_failed": 240,
+      "proceeded_and_succeeded": 206
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 445,
+        "success_rate": 0.46292134831460674
+      },
+      "inability": {
+        "count": 30,
+        "success_rate": 0.1
+      },
+      "refusal": {
+        "count": 3,
+        "success_rate": 0.6666666666666666
+      },
+      "uncertainty": {
+        "count": 2,
+        "success_rate": 0.0
+      }
+    },
+    "n_tasks": 480,
+    "n_abstained": 34
+  },
+  "gaia_generalist_gemini_2_flash": {
+    "agent": "gaia_generalist_gemini_2_flash",
+    "display_name": "Gemini 2.0 Flash",
+    "provider": "Google",
+    "accuracy": 0.2787878787878788,
+    "A_rate": 0.5818181818181818,
+    "A_prec": 0.8541666666666666,
+    "A_rec": 0.6890756302521008,
+    "A_sel": 0.463768115942029,
+    "A_cal": 0.6909090909090909,
+    "confusion_matrix": {
+      "abstained_and_failed": 246,
+      "abstained_and_succeeded": 42,
+      "proceeded_and_failed": 111,
+      "proceeded_and_succeeded": 96
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 197,
+        "success_rate": 0.467005076142132
+      },
+      "inability": {
+        "count": 283,
+        "success_rate": 0.14840989399293286
+      },
+      "uncertainty": {
+        "count": 12,
+        "success_rate": 0.3333333333333333
+      },
+      "refusal": {
+        "count": 3,
+        "success_rate": 0.0
+      }
+    },
+    "n_tasks": 495,
+    "n_abstained": 288
+  },
+  "gaia_generalist_gemini_2_5_flash": {
+    "agent": "gaia_generalist_gemini_2_5_flash",
+    "display_name": "Gemini 2.5 Flash",
+    "provider": "Google",
+    "accuracy": 0.37777777777777777,
+    "A_rate": 0.4404040404040404,
+    "A_prec": 0.8211009174311926,
+    "A_rec": 0.5811688311688312,
+    "A_sel": 0.5342960288808665,
+    "A_cal": 0.6606060606060606,
+    "confusion_matrix": {
+      "abstained_and_failed": 179,
+      "abstained_and_succeeded": 39,
+      "proceeded_and_failed": 129,
+      "proceeded_and_succeeded": 148
+    },
+    "type_breakdown": {
+      "inability": {
+        "count": 180,
+        "success_rate": 0.20555555555555555
+      },
+      "none": {
+        "count": 276,
+        "success_rate": 0.532608695652174
+      },
+      "refusal": {
+        "count": 38,
+        "success_rate": 0.05263157894736842
+      },
+      "uncertainty": {
+        "count": 1,
+        "success_rate": 1.0
+      }
+    },
+    "n_tasks": 495,
+    "n_abstained": 218
+  },
+  "gaia_generalist_gemini_2_5_pro": {
+    "agent": "gaia_generalist_gemini_2_5_pro",
+    "display_name": "Gemini 2.5 Pro",
+    "provider": "Google",
+    "accuracy": 0.501010101010101,
+    "A_rate": 0.42244897959183675,
+    "A_prec": 0.6666666666666666,
+    "A_rec": 0.5702479338842975,
+    "A_sel": 0.6325088339222615,
+    "A_cal": 0.6469387755102041,
+    "confusion_matrix": {
+      "abstained_and_failed": 138,
+      "abstained_and_succeeded": 69,
+      "proceeded_and_failed": 104,
+      "proceeded_and_succeeded": 179
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 281,
+        "success_rate": 0.6370106761565836
+      },
+      "inability": {
+        "count": 202,
+        "success_rate": 0.3316831683168317
+      },
+      "refusal": {
+        "count": 2,
+        "success_rate": 0.0
+      },
+      "uncertainty": {
+        "count": 5,
+        "success_rate": 0.4
+      }
+    },
+    "n_tasks": 490,
+    "n_abstained": 207
+  },
+  "gaia_generalist_claude_haiku_3_5": {
+    "agent": "gaia_generalist_claude_haiku_3_5",
+    "display_name": "Claude 3.5 Haiku",
+    "provider": "Anthropic",
+    "accuracy": 0.2808080808080808,
+    "A_rate": 0.2718052738336714,
+    "A_prec": 0.8507462686567164,
+    "A_rec": 0.3220338983050847,
+    "A_sel": 0.33147632311977715,
+    "A_cal": 0.4726166328600406,
+    "confusion_matrix": {
+      "abstained_and_failed": 114,
+      "abstained_and_succeeded": 20,
+      "proceeded_and_failed": 240,
+      "proceeded_and_succeeded": 119
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 358,
+        "success_rate": 0.329608938547486
+      },
+      "inability": {
+        "count": 126,
+        "success_rate": 0.15079365079365079
+      },
+      "refusal": {
+        "count": 8,
+        "success_rate": 0.125
+      },
+      "uncertainty": {
+        "count": 1,
+        "success_rate": 1.0
+      }
+    },
+    "n_tasks": 493,
+    "n_abstained": 134
+  },
+  "gaia_generalist_claude_sonnet_3_7": {
+    "agent": "gaia_generalist_claude_sonnet_3_7",
+    "display_name": "Claude 3.7 Sonnet",
+    "provider": "Anthropic",
+    "accuracy": 0.6242424242424243,
+    "A_rate": 0.15415821501014199,
+    "A_prec": 0.47368421052631576,
+    "A_rec": 0.1956521739130435,
+    "A_sel": 0.645083932853717,
+    "A_cal": 0.6186612576064908,
+    "confusion_matrix": {
+      "abstained_and_failed": 36,
+      "abstained_and_succeeded": 40,
+      "proceeded_and_failed": 148,
+      "proceeded_and_succeeded": 269
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 412,
+        "success_rate": 0.6480582524271845
+      },
+      "inability": {
+        "count": 71,
+        "success_rate": 0.49295774647887325
+      },
+      "uncertainty": {
+        "count": 5,
+        "success_rate": 0.6
+      },
+      "refusal": {
+        "count": 2,
+        "success_rate": 1.0
+      },
+      "clarification": {
+        "count": 3,
+        "success_rate": 0.6666666666666666
+      }
+    },
+    "n_tasks": 493,
+    "n_abstained": 76
+  },
+  "gaia_generalist_claude_sonnet_4_5": {
+    "agent": "gaia_generalist_claude_sonnet_4_5",
+    "display_name": "Claude 4.5 Sonnet",
+    "provider": "Anthropic",
+    "accuracy": 0.7474747474747475,
+    "A_rate": 0.4065040650406504,
+    "A_prec": 0.265,
+    "A_rec": 0.4344262295081967,
+    "A_sel": 0.7636986301369864,
+    "A_cal": 0.5609756097560976,
+    "confusion_matrix": {
+      "abstained_and_failed": 53,
+      "abstained_and_succeeded": 147,
+      "proceeded_and_failed": 69,
+      "proceeded_and_succeeded": 223
+    },
+    "type_breakdown": {
+      "inability": {
+        "count": 199,
+        "success_rate": 0.7386934673366834
+      },
+      "none": {
+        "count": 285,
+        "success_rate": 0.7684210526315789
+      },
+      "uncertainty": {
+        "count": 5,
+        "success_rate": 0.6
+      },
+      "clarification": {
+        "count": 3,
+        "success_rate": 0.3333333333333333
+      }
+    },
+    "n_tasks": 492,
+    "n_abstained": 200
+  },
+  "gaia_generalist_claude_opus_4_5": {
+    "agent": "gaia_generalist_claude_opus_4_5",
+    "display_name": "Claude 4.5 Opus",
+    "provider": "Anthropic",
+    "accuracy": 0.7151515151515152,
+    "A_rate": 0.2927835051546392,
+    "A_prec": 0.30985915492957744,
+    "A_rec": 0.33587786259541985,
+    "A_sel": 0.7463556851311953,
+    "A_cal": 0.6185567010309279,
+    "confusion_matrix": {
+      "abstained_and_failed": 44,
+      "abstained_and_succeeded": 98,
+      "proceeded_and_failed": 87,
+      "proceeded_and_succeeded": 256
+    },
+    "type_breakdown": {
+      "inability": {
+        "count": 139,
+        "success_rate": 0.6834532374100719
+      },
+      "none": {
+        "count": 340,
+        "success_rate": 0.7470588235294118
+      },
+      "uncertainty": {
+        "count": 3,
+        "success_rate": 1.0
+      },
+      "refusal": {
+        "count": 2,
+        "success_rate": 1.0
+      },
+      "clarification": {
+        "count": 1,
+        "success_rate": 0.0
+      }
+    },
+    "n_tasks": 485,
+    "n_abstained": 142
+  }
+}

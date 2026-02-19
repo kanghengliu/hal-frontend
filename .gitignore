@@ -3,7 +3,6 @@ venv/*
 evals_live/*
 evals_archive/*
 .cache/*
-data/
 logs/
 scripts/
 .DS_Store
