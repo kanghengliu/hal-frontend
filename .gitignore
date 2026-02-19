@@ -25,7 +25,7 @@ hal_traces/
 *.txt
 *.sh
 !static/downloads/*.sh
-*.csv
+!reliability/data/
 !preprocessed_traces/
 !preprocessed_traces/*.csv
 .vscode/*
