@@ -256,9 +256,19 @@
         // Provider logo images for Chart.js tick labels
         window._providerLogoMap = { openai: '{{ url_for("reliability.static", filename="openai.svg") }}', anthropic: '{{ url_for("reliability.static", filename="anthropic.svg") }}', google: '{{ url_for("reliability.static", filename="gemini.svg") }}' };
         window._logoImgCache = {};
+        window._logoChartsToRedraw = [];
         (function() {
+            var pending = Object.keys(window._providerLogoMap).length;
+            function onLoaded() {
+                pending--;
+                if (pending <= 0) {
+                    window._logoChartsToRedraw.forEach(function(ch) { ch.draw(); });
+                }
+            }
             Object.keys(window._providerLogoMap).forEach(function(p) {
                 var img = new Image();
+                img.onload = onLoaded;
+                img.onerror = onLoaded;
                 img.src = window._providerLogoMap[p];
                 window._logoImgCache[p] = img;
             });
@@ -365,7 +375,8 @@
                 chart._ltrProgress = 0;
                 chart.update('none');
             } else {
-                // Store original data and zero it out so bars never flash
+                // Store original data and zero it out so bars start at 0,
+                // while keeping labels/axes/logos intact
                 chart._origData = chart.data.datasets.map(function(ds) {
                     return ds.data.slice();
                 });
@@ -373,6 +384,10 @@
                     ds.data = ds.data.map(function() { return 0; });
                 });
                 chart.update('none');
+                // Queue a redraw for when provider logo images finish loading
+                if (chart._providerList && window._logoChartsToRedraw) {
+                    window._logoChartsToRedraw.push(chart);
+                }
             }
             var threshold = 0.85;
             var rect = el.getBoundingClientRect();
@@ -401,14 +416,14 @@
                 </div>
                 <div class="modal-body">
                     <p class="text-muted mb-3">If you use the HAL Reliability Evaluation in your research, please cite:</p>
-                    <div class="d-flex justify-content-between align-items-center mt-3 mb-2"><h6 class="mb-0">HAL Reliability</h6><button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(this.closest('div').nextElementSibling.textContent).then(function(){var b=event.target;b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})">Copy</button></div>
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-2"><h6 class="mb-0">HAL Reliability</h6><div class="d-flex gap-2"><a href="https://arxiv.org/abs/2602.16666" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-file-lines me-1"></i>arXiv</a><button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(this.closest('div').parentElement.nextElementSibling.textContent).then(function(){var b=event.target;b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})">Copy</button></div></div>
                     <pre class="bibtex-block p-3 rounded" style="background: var(--bg-card-hover); font-size: 0.82rem; white-space: pre-wrap; cursor: text;">@article{rabanser2026towards,
   title   = {Towards a Science of AI Agent Reliability},
   author  = {Stephan Rabanser and Sayash Kapoor and Peter Kirgis and Kangheng Liu and Saiteja Utpala and Arvind Narayanan},
   journal = {arXiv preprint arXiv:2602.16666},
   year    = {2026}
 }</pre>
-                    <div class="d-flex justify-content-between align-items-center mt-3 mb-2"><h6 class="mb-0">HAL Paper</h6><button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(this.closest('div').nextElementSibling.textContent).then(function(){var b=event.target;b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})">Copy</button></div>
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-2"><h6 class="mb-0">HAL Paper</h6><div class="d-flex gap-2"><a href="https://arxiv.org/abs/2510.11977" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-file-lines me-1"></i>arXiv</a><button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(this.closest('div').parentElement.nextElementSibling.textContent).then(function(){var b=event.target;b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})">Copy</button></div></div>
                     <pre class="bibtex-block p-3 rounded" style="background: var(--bg-card-hover); font-size: 0.82rem; white-space: pre-wrap; cursor: text;">@Misc{hal,
   title        = {Holistic Agent Leaderboard: The Missing Infrastructure for AI Agent Evaluation},
   author       = {Sayash Kapoor and Benedikt Stroebl and Peter Kirgis and Nitya Nadgir and Zachary S Siegel and Boyi Wei and Tianci Xue and Ziru Chen and Felix Chen and Saiteja Utpala and Franck Ndzomga and Dheeraj Oruganty and Sophie Luskin and Kangheng Liu and Botao Yu and Amit Arora and Dongyoon Hahm and Harsh Trivedi and Huan Sun and Juyong Lee and Tengjun Jin and Yifan Mai and Yifei Zhou and Yuxuan Zhu and Rishi Bommasani and Daniel Kang and Dawn Song and Peter Henderson and Yu Su and Percy Liang and Arvind Narayanan},

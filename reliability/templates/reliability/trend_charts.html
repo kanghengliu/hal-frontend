@@ -33,6 +33,17 @@
     </div>
 </div>
 
+{# {% if trend_by_bench is defined %}
+Social media preview: bold, padded reliability-over-time chart
+<div class="row g-4 mt-2">
+    <div class="col-md-5">
+        <div style="height: 420px; padding: 24px 32px;" id="previewChartWrap">
+            <canvas id="previewReliabilityChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endif %} #}
+
 <script>
 window._trendChartsData = {{ trend_charts | safe }};
 window._trendProvColors = {{ provider_colors | safe }};
@@ -55,6 +66,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const provShapes = window._trendProvShapes;
     const shapeMap = { circle: 'circle', rectRot: 'rectRot', triangle: 'triangle', cross: 'cross' };
     const provDisplayName = { openai: 'OpenAI', anthropic: 'Anthropic', google: 'Google' };
+
+    // Fix -0.0 display on axes with negative min
+    function fixNegZeroTick(value) { return (Math.abs(value) < 0.05) ? '0.0' : value.toFixed(1); }
 
     // ── Client-side linear regression for trend-line refitting ──
     var REF_TS = new Date('2024-01-01').getTime(), YEAR_MS = 365.25*24*3600*1000;
@@ -184,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (dimNames.length === 0) return;
     populateDimSelect();
 
-    var dateChart = null, accDateChart = null, accChart = null;
+    var dateChart = null, accDateChart = null, accChart = null, previewChart = null;
 
     function buildDatasets(data) {
         // Group points by provider
@@ -268,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (dateChart) dateChart.destroy();
         if (accDateChart) accDateChart.destroy();
         if (accChart) accChart.destroy();
+        if (previewChart) previewChart.destroy();
 
         var cc = getChartColors();
 
@@ -289,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
                              title: { display: true, text: 'Release Date', color: cc.label },
                              ticks: { color: cc.tick }, grid: { color: cc.grid } },
                         y: { min: -0.02, max: 1.02, title: { display: true, text: dimName, color: cc.label },
-                             ticks: { color: cc.tick, stepSize: 0.2 }, grid: { color: cc.grid } },
+                             ticks: { color: cc.tick, stepSize: 0.2, callback: fixNegZeroTick }, grid: { color: cc.grid } },
                     },
                     plugins: {
                         legend: { onClick: trendLegendClick('trendDateStats', true), labels: { color: cc.label, usePointStyle: true } },
@@ -323,7 +338,7 @@ document.addEventListener('DOMContentLoaded', function() {
                              title: { display: true, text: 'Release Date', color: cc.label },
                              ticks: { color: cc.tick }, grid: { color: cc.grid } },
                         y: { min: -0.02, max: 1.02, title: { display: true, text: 'Accuracy', color: cc.label },
-                             ticks: { color: cc.tick, stepSize: 0.2 }, grid: { color: cc.grid } },
+                             ticks: { color: cc.tick, stepSize: 0.2, callback: fixNegZeroTick }, grid: { color: cc.grid } },
                     },
                     plugins: {
                         legend: { onClick: trendLegendClick('trendAccDateStats', true), labels: { color: cc.label, usePointStyle: true } },
@@ -354,9 +369,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     onHover: onPointHover,
                     scales: {
                         x: { min: -0.02, max: 1.02, title: { display: true, text: 'Accuracy', color: cc.label },
-                             ticks: { color: cc.tick }, grid: { color: cc.grid } },
+                             ticks: { color: cc.tick, callback: fixNegZeroTick }, grid: { color: cc.grid } },
                         y: { min: -0.02, max: 1.02, title: { display: true, text: dimName, color: cc.label },
-                             ticks: { color: cc.tick, stepSize: 0.2 }, grid: { color: cc.grid } },
+                             ticks: { color: cc.tick, stepSize: 0.2, callback: fixNegZeroTick }, grid: { color: cc.grid } },
                     },
                     plugins: {
                         legend: { onClick: trendLegendClick('trendAccStats', false), labels: { color: cc.label, usePointStyle: true } },
@@ -371,6 +386,66 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         document.getElementById('trendAccStats').innerHTML = statsHtml(d.vs_accuracy, false);
         initStats('trendAccStats', d.vs_accuracy, false);
+
+        // Social media preview chart (index page only)
+        var previewCanvas = document.getElementById('previewReliabilityChart');
+        if (previewCanvas && d.vs_date) {
+            var dsPreview = buildDatasets(d.vs_date);
+            // Enlarge points for the preview version
+            dsPreview.forEach(function(ds) {
+                if (!ds._isTrend) {
+                    ds.pointRadius = 9;
+                    ds.pointHoverRadius = 11;
+                    ds.pointBorderWidth = 2;
+                } else {
+                    ds.borderWidth = 3;
+                }
+            });
+            var bigFont = { size: 18, weight: 'bold' };
+            var bigTick = { size: 15, weight: 'bold' };
+            previewChart = new Chart(previewCanvas, {
+                type: 'scatter',
+                data: { datasets: dsPreview },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    clip: false,
+                    layout: { padding: { top: 24, bottom: 24, left: 24, right: 24 } },
+                    scales: {
+                        x: { type: 'time',
+                             max: '2026-02-01',
+                             time: { unit: 'month', tooltipFormat: 'yyyy-MM' },
+                             title: { display: true, text: 'Release Date', color: cc.label, font: bigFont },
+                             ticks: {
+                                 color: cc.tick, font: bigTick,
+                                 callback: function(value) {
+                                     var d = new Date(value);
+                                     var m = d.getMonth();
+                                     if (m === 0) return 'Jan ' + d.getFullYear();
+                                     if (m === 6) return 'Jul ' + d.getFullYear();
+                                     return null;
+                                 },
+                                 autoSkip: false,
+                                 maxRotation: 0
+                             },
+                             grid: { color: cc.grid } },
+                        y: { min: -0.02, max: 1.02,
+                             title: { display: true, text: dimName, color: cc.label, font: bigFont },
+                             ticks: { color: cc.tick, font: bigTick, stepSize: 0.2, callback: function(value) { return fixNegZeroTick(value); } },
+                             grid: { color: cc.grid } },
+                    },
+                    plugins: {
+                        legend: { labels: { color: cc.label, usePointStyle: true, font: bigTick } },
+                        tooltip: { callbacks: { label: function(ctx) {
+                            var p = ctx.raw;
+                            return (p.label || '') + ': ' + (p.y != null ? p.y.toFixed(3) : '—');
+                        }}}
+                    }
+                }
+            });
+            animateOnScroll(previewChart, ANIM_LTR);
+        }
     }
 
     sel.addEventListener('change', function() { render(sel.value); });

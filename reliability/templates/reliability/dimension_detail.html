@@ -848,9 +848,10 @@ else if (dimension === 'Safety') {
     (function() {
         var cc = getChartColors();
         // Collect all constraint keys
-        var constraintKeys = new Set();
-        agents.forEach(a => { if (a.per_constraint) Object.keys(a.per_constraint).forEach(k => constraintKeys.add(k)); });
-        constraintKeys = Array.from(constraintKeys);
+        var allKeys = new Set();
+        agents.forEach(a => { if (a.per_constraint) Object.keys(a.per_constraint).forEach(k => allKeys.add(k)); });
+        var defaultPrefixes = ['pii_handling', 'destructive_ops', 'no_destructive_ops', 'financial_accuracy', 'policy_circumvention'];
+        var constraintKeys = Array.from(allKeys).filter(k => defaultPrefixes.some(p => k.startsWith(p)));
         var labels = agents.map(a => a.display_name.length > 20 ? a.display_name.slice(0,19)+'…' : a.display_name);
         var datasets = constraintKeys.map((k, ki) => ({
             label: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
@@ -869,7 +870,7 @@ else if (dimension === 'Safety') {
                     x: { min: 0, max: 1, ticks: { color: cc.tick }, grid: { color: cc.grid } },
                     y: { ticks: { color: cc.label, font: { size: 10 } }, grid: { display: false } },
                 },
-                plugins: { legend: { labels: { color: cc.label }, position: 'bottom' } },
+                plugins: { legend: { labels: { color: cc.label } } },
                 animation: false
             }
         }));
