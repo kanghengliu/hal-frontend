@@ -120,7 +120,7 @@
                         <a href="https://github.com/princeton-pli/hal-harness/blob/main/agents/README.md" class="text-gray-700 hover:text-blue-600 transition-colors">Add Agent</a>
                         <a href="https://github.com/princeton-pli/hal-harness/blob/main/hal/benchmarks/README.md" class="text-gray-700 hover:text-blue-600 transition-colors">Add Benchmark</a>
                         <a href="https://github.com/princeton-pli/hal-harness" class="text-gray-700 hover:text-blue-600 transition-colors">GitHub</a>
-                        <a href="/reliability" class="text-gray-700 hover:text-blue-600 transition-colors inline-flex items-center gap-1.5">Reliability<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-primary text-white shadow-sm ">New</span></a>
+                        <a href="/reliability" class="text-gray-700 hover:text-blue-600 transition-colors">Reliability</a>
                         <a href="{{ url_for('about') }}" class="text-gray-700 hover:text-blue-600 transition-colors">About</a>
                         <a href="{{ url_for('insights') }}" class="text-gray-700 hover:text-blue-600 transition-colors">Insights</a>
                         <a href="{{ url_for('press') }}" class="text-gray-700 hover:text-blue-600 transition-colors">Press</a>
@@ -167,7 +167,7 @@
                     <a href="https://github.com/princeton-pli/hal-harness/blob/main/agents/README.md" class="flex items-center h-12 text-gray-700 hover:text-blue-600 border-b border-gray-100">Add Agent</a>
                     <a href="https://github.com/princeton-pli/hal-harness/blob/main/hal/benchmarks/README.md" class="flex items-center h-12 text-gray-700 hover:text-blue-600 border-b border-gray-100">Add Benchmark</a>
                     <a href="https://github.com/princeton-pli/hal-harness" class="flex items-center h-12 text-gray-700 hover:text-blue-600 border-b border-gray-100">GitHub</a>
-                    <a href="/reliability" class="flex items-center gap-1.5 h-12 text-gray-700 hover:text-blue-600 border-b border-gray-100">Reliability<span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-primary text-white shadow-sm ">New</span></a>
+                    <a href="/reliability" class="flex items-center h-12 text-gray-700 hover:text-blue-600 border-b border-gray-100">Reliability</a>
                     <a href="{{ url_for('about') }}" class="flex items-center h-12 text-gray-700 hover:text-blue-600 border-b border-gray-100">About</a>
                     <a href="{{ url_for('insights') }}" class="flex items-center h-12 text-gray-700 hover:text-blue-600 border-b border-gray-100">Insights</a>
                     <a href="{{ url_for('press') }}" class="flex items-center h-12 text-gray-700 hover:text-blue-600 border-b border-gray-100">Press</a>
@@ -176,6 +176,14 @@
             </div>
         </nav>
         <main class="pt-24">
+            <!-- Pause Notice Banner -->
+            <div class="bg-amber-500 text-white text-center py-3 px-4">
+                <p class="text-sm sm:text-base font-medium">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-white/20 mr-2">Notice</span>
+                    We have paused updating HAL with new models and are currently focusing on
+                    <a href="/reliability" class="underline hover:text-amber-100 font-semibold">reliability</a>.
+                </p>
+            </div>
             {% block content %}{% endblock %}
         </main>
     </div>
