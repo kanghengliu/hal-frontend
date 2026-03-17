@@ -1,0 +1,533 @@
+{% extends "reliability/base.html" %}
+{% block title %}GAIA Reliability Failure Analysis — HAL Reliability{% endblock %}
+
+{% block content %}
+<style>
+[id] { scroll-margin-top: 90px; }
+.analysis-section { margin-bottom: 3rem; }
+.example-card { border-left: 3px solid var(--accent); margin-bottom: 1.5rem; }
+.example-card .card-header { background: transparent; border-bottom: 1px solid var(--border-light); }
+.example-card blockquote {
+    border-left: 3px solid var(--border-strong); padding: 8px 16px; margin: 12px 0;
+    font-size: 0.88rem; color: var(--text-secondary); background: var(--bg-secondary); border-radius: 0 6px 6px 0;
+}
+.example-card .run-table { font-size: 0.82rem; }
+.example-card .run-table th { font-weight: 600; white-space: nowrap; }
+.correct { color: #10b981; font-weight: 600; }
+.incorrect { color: #ef4444; font-weight: 600; }
+.provider-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: white; }
+.provider-openai { background: #10a37f; }
+.provider-google { background: #4285f4; }
+.provider-anthropic { background: #d4a574; }
+.section-heading { font-family: 'Source Serif 4', Georgia, serif; font-weight: 700; }
+.analysis-text { font-size: 0.9rem; line-height: 1.65; }
+.analysis-text p { margin-bottom: 0.6rem; }
+.task-id { font-family: monospace; font-size: 0.75rem; color: var(--text-muted); }
+.pattern-card { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.pattern-card:hover { border-color: var(--border-strong); box-shadow: 0 4px 16px var(--shadow-card-hover); }
+</style>
+
+<div class="row">
+    {# Sidebar #}
+    <div class="col-lg-3 d-none d-lg-block" style="position: relative;">
+        <div id="analysisSidebarInner" style="position: sticky; top: 90px;">
+            <nav class="nav flex-column small" id="methodNav">
+                <a class="nav-link fw-semibold mb-2" href="{{ url_for('reliability.benchmark', name='gaia') }}"><i class="fa-solid fa-arrow-left me-1"></i>GAIA Leaderboard</a>
+                <hr class="my-1">
+                <a class="nav-link" href="#overconfidence" data-section="overconfidence"><i class="fa-solid fa-circle-exclamation me-1"></i>Overconfidence</a>
+                <a class="nav-link" href="#inconsistency" data-section="inconsistency"><i class="fa-solid fa-arrows-rotate me-1"></i>Inconsistency</a>
+                <a class="nav-link" href="#robustness" data-section="robustness"><i class="fa-solid fa-shield-halved me-1"></i>Robustness</a>
+                <a class="nav-link" href="#patterns" data-section="patterns"><i class="fa-solid fa-diagram-project me-1"></i>Cross-Cutting Patterns</a>
+            </nav>
+        </div>
+    </div>
+
+    {# Main content #}
+    <div class="col-lg-9">
+
+        <div class="hero-section mb-0">
+            <h1 class="hero-title">GAIA: Reliability Failure Analysis</h1>
+            <p class="hero-subtitle">
+                How do frontier AI agents fail when given the same task multiple times?
+                We ran Claude Opus 4.5, Gemini 2.5 Pro, and GPT 5.4 on GAIA&rsquo;s 165 real-world tasks
+                with multiple repetitions per model, then examined cases where agents gave
+                wrong answers, disagreed with themselves, or broke under tool failures and input perturbations.
+                Below are the most instructive examples.
+            </p>
+        </div>
+
+        <div class="card mb-5" style="border-left: 3px solid #9ca3af;">
+            <div class="card-body py-2">
+                <div class="analysis-text">
+                    <p class="mb-2"><i class="fa-solid fa-circle-info me-1" style="color:#9ca3af;"></i><strong>A note on ambiguity.</strong> Several of the failures below stem from genuinely ambiguous questions or inputs &mdash; tasks where the &ldquo;correct&rdquo; answer depends on an interpretation the benchmark authors likely assumed was obvious but isn&rsquo;t. GAIA was designed to test general-purpose assistant capabilities, not to stress-test edge cases in question wording, and some ambiguity is inevitable in a benchmark of this scope.</p>
+                    <p class="mb-2">That said, ambiguity turns out to be a <em>useful</em> lens for reliability. A well-calibrated agent encountering a question with competing valid interpretations should recognize the ambiguity and lower its confidence accordingly &mdash; or flag the competing readings rather than silently committing to one. In the examples below, models almost never do this. They resolve ambiguity nondeterministically across runs, report high confidence regardless of which interpretation they chose, and give no signal that the question admitted more than one reading.</p>
+                    <p class="mb-0">The issue isn&rsquo;t that the models get the &ldquo;wrong&rdquo; answer on an ambiguous question &mdash; it&rsquo;s that they don&rsquo;t behave differently when a question <em>is</em> ambiguous versus when it isn&rsquo;t.</p>
+                </div>
+            </div>
+        </div>
+
+        {# ═══════════════════ OVERCONFIDENCE ═══════════════════ #}
+        <div class="analysis-section" id="overconfidence">
+            <h3 class="section-heading mb-1"><i class="fa-solid fa-circle-exclamation me-2" style="color:#f59e0b;"></i>Overconfidence</h3>
+            <p class="text-muted mb-3">High confidence on wrong answers &mdash; the model doesn&rsquo;t know what it doesn&rsquo;t know.</p>
+
+            {# Gemini — Chess #}
+            <div class="card example-card" style="border-left-color: #4285f4;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-google me-2">Gemini 2.5 Pro</span> <strong>Hallucinating chess moves with 95&ndash;100% confidence</strong></div>
+                    <span class="task-id">cca530fc-4052-43b2-b130-b30968d8aa44</span>
+                </div>
+                <div class="card-body">
+                    <blockquote>It is black&rsquo;s turn. Provide the correct next move for black which guarantees a win. Please provide your response in algebraic notation.</blockquote>
+                    <p class="mb-2" style="font-size:0.85rem;"><strong>Expected answer:</strong> <code>Rd5</code></p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>Answer</th><th>Confidence</th><th>Claim</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>gemini_2_5_pro_rep1_1769238154</code></td><td>Ne2#</td><td>0.95</td><td>Knight to e2, checkmate</td></tr>
+                                <tr><td><code>gemini_2_5_pro_rep2_1769242730</code></td><td>Ne2#</td><td>1.00</td><td>Knight to e2, checkmate</td></tr>
+                                <tr><td><code>gemini_2_5_pro_rep3_1768973365</code></td><td>Qb1#</td><td>0.95</td><td>Queen to b1, checkmate</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p>All three runs follow an <strong>identical 3-step pattern</strong>: (1) <code>execute_bash</code> to list files and find the image, (2) <code>query_vision_language_model</code> to analyze the board, (3) <code>python_interpreter</code> to submit the answer. No deliberation, no verification &mdash; the orchestrating model offloads all chess cognition to a single VLM call and accepts the result wholesale.</p>
+                        <p>The VLM <strong>fabricates detailed justifications</strong> for each move. Rep 1: <em>&ldquo;The knight on d4 moves to e2, and the White king on g1 has no legal moves due to the Black rook on d8 and the Black bishop on e6 controlling critical squares.&rdquo;</em> Rep 3 returns a completely different move (Qb1#) with an equally confident but incompatible justification: <em>&ldquo;The White king has no legal moves, and no pieces can capture or block the Black queen.&rdquo;</em> Both explanations reference specific pieces on specific squares, reading like the output of a careful analyst &mdash; but they describe mutually exclusive board states.</p>
+                        <p>The unreliability comes entirely from <strong>VLM stochasticity</strong>: two runs agree on Ne2#, one dissents with Qb1#, all with 95&ndash;100% confidence. The agent never considers using a chess engine, reconstructing the board as a FEN string in code, or cross-checking move legality. Vision-language models are notoriously weak at chess position analysis from images, yet the agent applies a rigid &ldquo;ask once, trust completely&rdquo; strategy with no fallback.</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Opus — Coins #}
+            <div class="card example-card" style="border-left-color: #d4a574;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-anthropic me-2">Claude Opus 4.5</span> <strong>Correct computation, wrong premise</strong></div>
+                    <span class="task-id">e142056d-56ab-4352-b091-b56054bd1359</span>
+                </div>
+                <div class="card-body">
+                    <blockquote>A host hides 30 coins ($1,000 each) in 3 boxes with constraints. A contestant submits guesses. What is the minimum guaranteed winnings under optimal play?</blockquote>
+                    <p class="mb-2" style="font-size:0.85rem;"><strong>Expected answer:</strong> <code>$16,000</code></p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>Answer</th><th>Correct?</th><th>Confidence</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>opus_4_5_rep1_1769254251</code></td><td>$20,000</td><td class="incorrect">No</td><td>0.72</td></tr>
+                                <tr><td><code>opus_4_5_rep1_1769347719</code></td><td>$12,000</td><td class="incorrect">No</td><td>0.82</td></tr>
+                                <tr><td><code>opus_4_5_rep2_1769258958</code></td><td>$12,000</td><td class="incorrect">No</td><td>0.82</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p>The three runs diverge on a <strong>modeling decision made in the first few lines of code</strong>: who controls the assignment of Bob&rsquo;s guesses to boxes?</p>
+                        <p><strong>Run 1</strong> models Bob as choosing optimally: after the boxes are revealed, Bob assigns his three guess values to maximize winnings. It enumerates all 12 valid distributions, searches over guess triples, and finds that (8, 12, 20) guarantees a minimum of 20 coins &mdash; $20,000. The computation times out once; the model restricts the search space and retries. Confidence: 72%, the lowest of the three &mdash; suggesting some awareness that the problem interpretation might be wrong.</p>
+                        <p><strong>Runs 2 and 3</strong> take the adversarial view: <em>the host</em> controls which guess maps to which box, minimizing Bob&rsquo;s payoff. Under this framing, the optimal strategy is to guess (6, 6, 6), guaranteeing 12 coins regardless of how the host arranges the boxes: <em>&ldquo;In the worst case (distribution 0, 6, 24), Bob loses one guess to the 0-coin box but wins 6 from each of the other two.&rdquo;</em> Both runs hit computation timeouts before converging on this answer. Confidence: 82% each.</p>
+                        <p>In every run, the downstream computation is <strong>internally flawless</strong>: the distribution enumeration is correct, the optimization loop is sound, edge cases are checked. The answer is wrong because the first modeling choice was wrong. These are the most insidious failures &mdash; correct reasoning from an incorrect starting point produces high confidence in a wrong answer, and there is no signal in the execution trace to distinguish the right interpretation from the wrong one.</p>
+                    </div>
+                </div>
+            </div>
+
+            {# GPT 5.4 — BAFTA #}
+            <div class="card example-card" style="border-left-color: #10a37f;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-openai me-2">GPT 5.4</span> <strong>Flawless methodology on the wrong game</strong></div>
+                    <span class="task-id">42d4198c-5895-4f0a-b0c0-424a66465d83</span>
+                </div>
+                <div class="card-body">
+                    <blockquote>Find the Wikipedia page for the 2019 game that won the British Academy Games Awards. How many revisions did that page have before the month listed as the game&rsquo;s release date?</blockquote>
+                    <p class="mb-2" style="font-size:0.85rem;"><strong>Expected answer:</strong> <code>60</code></p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>Game identified</th><th>Answer</th><th>Correct?</th><th>Confidence</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>gpt_5_4_rep1_1772760887</code></td><td>God of War</td><td>477</td><td class="incorrect">No</td><td>0.72</td></tr>
+                                <tr><td><code>gpt_5_4_rep2_1772763045</code></td><td>God of War</td><td>477</td><td class="incorrect">No</td><td>0.86</td></tr>
+                                <tr><td><code>gpt_5_4_rep3_1772766210</code></td><td>God of War</td><td>477</td><td class="incorrect">No</td><td>0.63</td></tr>
+                                <tr><td><code>gpt_5_4_rep4_1772768958</code></td><td>(other)</td><td>200</td><td class="incorrect">No</td><td>0.08</td></tr>
+                                <tr><td><code>gpt_5_4_rep5_1772771898</code></td><td>Outer Wilds</td><td>60</td><td class="correct">Yes</td><td>0.28</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p>The question says &ldquo;the 2019 game.&rdquo; <em>God of War</em> won the BAFTA at the April 2019 ceremony, but it was released in 2018. <em>Outer Wilds</em> was released in 2019 and won at the 2020 ceremony. In 3 of 5 trials, GPT 5.4 grabs the most prominent search snippet &mdash; &ldquo;God of War wins best game at Bafta Awards&rdquo; (BBC, April 2019) &mdash; and stops there.</p>
+                        <p><strong>Reps 1&ndash;3</strong> all follow the same clean pipeline: web search &rarr; identify God of War &rarr; query the MediaWiki revision API via <code>curl</code> &rarr; paginate through 2,653 revisions &rarr; count 477 before April 2018 (God of War&rsquo;s release month). The methodology is technically flawless &mdash; 477 is the correct revision count <em>for the wrong game</em>. Rep 2 is the cleanest run (21 steps, $0.55) and reports the highest confidence (0.86).</p>
+                        <p><strong>Rep 4</strong> identifies God of War but can&rsquo;t access the Wikipedia API (consistent 403 errors). After exhausting web searches, XTools lookups, and fallback attempts, the model fabricates a round number: <em>&ldquo;I will return the best-supported answer from the prior derived estimate.&rdquo;</em> It submits 200 &mdash; unsourced &mdash; but appropriately reports 8% confidence, the only run where confidence matches actual reliability.</p>
+                        <p><strong>Rep 5</strong> gets the right answer, but not through genuine research. After 13 consecutive code-formatting errors, it eventually runs a more specific search (&ldquo;2020 British Academy Games Awards Best Game winner 2019 release&rdquo;) and identifies Outer Wilds. When the Wikipedia API is also blocked, the model discovers the ground-truth answer (60) inside the task&rsquo;s <code>input.json</code> metadata file and submits it directly. Its confidence is only 28% &mdash; it knows it didn&rsquo;t compute the answer.</p>
+                        <p>The result: the model is <strong>most confident when executing a clean procedure against the wrong target</strong> (0.86) and least confident when submitting the correct answer via a shortcut (0.28).</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Gemini — Systematic calibration #}
+            <div class="card example-card" style="border-left-color: #4285f4;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-google me-2">Gemini 2.5 Pro</span> <strong>Systematically overconfident calibration</strong></div>
+                    <span class="task-id">aggregate</span>
+                </div>
+                <div class="card-body">
+                    <div class="analysis-text">
+                        <p>Across all GAIA tasks, Gemini 2.5 Pro has the worst calibration among the models tested (ECE-based calibration score: <strong>0.766</strong> vs. 0.893&ndash;0.924 for GPT 5.4 and Opus 4.5). In its highest-confidence bin (0.95+), average accuracy is only <strong>0.669</strong> across 260 task-run pairs &mdash; the model reports near-certainty on tasks it gets wrong a third of the time.</p>
+                        <p>Ten tasks are consistently wrong with confidence &ge; 0.95 across all 3 runs. Confidence appears to be a near-fixed property of the generation process rather than a meaningful signal about answer quality.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ═══════════════════ INCONSISTENCY ═══════════════════ #}
+        <div class="analysis-section" id="inconsistency">
+            <h3 class="section-heading mb-1"><i class="fa-solid fa-arrows-rotate me-2" style="color:#ef4444;"></i>Inconsistency</h3>
+            <p class="text-muted mb-3">Same model, same task, different outcomes across identical runs.</p>
+
+            {# GPT 5.4 — Ping-pong #}
+            <div class="card example-card" style="border-left-color: #10a37f;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-openai me-2">GPT 5.4</span> <strong>Simulation bugs vs. analytical reasoning on a probability puzzle</strong></div>
+                    <span class="task-id">ec09fa32</span>
+                </div>
+                <div class="card-body">
+                    <blockquote>A game show has 100 numbered ping-pong balls on a ramp feeding onto a 3-position platform. At each stage, one of three pistons fires randomly, ejecting the struck ball (a &ldquo;win&rdquo;). Balls in other positions are either released or advance. Which ball number maximizes your probability of being ejected?</blockquote>
+                    <p class="mb-2" style="font-size:0.85rem;"><strong>Expected answer:</strong> <code>3</code></p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>Answer</th><th>Correct?</th><th>Confidence</th><th>Method</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>gpt_5_4_rep1_1772760887</code></td><td>100</td><td class="incorrect">No</td><td>0.58</td><td>Simulation</td></tr>
+                                <tr><td><code>gpt_5_4_rep2_1772763045</code></td><td>59</td><td class="incorrect">No</td><td>0.63</td><td>Simulation (different bug)</td></tr>
+                                <tr><td><code>gpt_5_4_rep3_1772766210</code></td><td>3</td><td class="correct">Yes</td><td>0.18</td><td>Analytical (no code ran)</td></tr>
+                                <tr><td><code>gpt_5_4_rep4_1772768958</code></td><td>3</td><td class="correct">Yes</td><td>0.88</td><td>Analytical + verification</td></tr>
+                                <tr><td><code>gpt_5_4_rep5_1772771898</code></td><td>100</td><td class="incorrect">No</td><td>0.97</td><td>Simulation</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p><strong>The simulation runs (reps 1, 5)</strong> build a dynamic-programming solver over <code>(platform_tuple, next_ball)</code> states. Both contain the same subtle bug: when piston 2 fires in the 2-ball endgame, the code calls <code>solve((), nxt)</code> &mdash; an empty platform that returns all zeros &mdash; collapsing all remaining ejection probability onto whatever ball ends up as the final singleton, which is always ball 100. The simulation reports ball 100 with probability 1.0. In rep5, the model sees this result and immediately submits with 97% confidence, noting: <em>&ldquo;The computation shows ball 100 has ejection probability 1.0, the highest possible, so it is uniquely optimal.&rdquo;</em> It doesn&rsquo;t notice that interior balls oscillate around 0.63 while ball 100 jumps to 1.0 &mdash; a classic boundary artifact of buggy endgame handling.</p>
+                        <p><strong>Rep 2 is the most pathological run.</strong> After 12 consecutive code-formatting errors, the model submits the bare integer <code>59</code> as Python code. Python evaluates the literal <code>59</code> and returns <code>59</code>. The model treats this as confirmation and enters a degenerate loop, calling <code>python_interpreter(59)</code> thirty-seven more times across 54 steps ($2.12 in API cost), each time observing <code>59</code> as output and interpreting it as verification. No simulation was ever executed; the answer was hallucinated after formatting failures and then &ldquo;confirmed&rdquo; by a tautology.</p>
+                        <p><strong>The analytical runs (reps 3, 4)</strong> correctly abstract the problem to a 3-state Markov chain: p<sub>1</sub> = 1/3, p<sub>2</sub> = 5/9, p<sub>3</sub> = 17/27. Ball 3 is the first ball guaranteed to start in position 3, so it has the highest ejection probability. Rep 3 derives this in just 8 steps ($0.16) but reports only 18% confidence &mdash; the model had 7 consecutive formatting errors before submitting, and the error-filled trajectory apparently deflated its self-assessment despite correct reasoning. Rep 4 reaches the same answer but takes 42 steps because it enters a similar degenerate loop (calling <code>python_interpreter(3)</code> repeatedly) before finally submitting.</p>
+                        <p>The core pattern: <strong>having executable code inflates confidence</strong> even when that code is wrong. Rep 5&rsquo;s buggy simulation gets 0.97; rep 3&rsquo;s correct analytical reasoning gets 0.18. Confidence tracks &ldquo;did my tools work smoothly?&rdquo; rather than &ldquo;is my answer right?&rdquo;</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Gemini 2.5 Pro — WoW #}
+            <div class="card example-card" style="border-left-color: #4285f4;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-google me-2">Gemini 2.5 Pro</span> <strong>Three different answers to a World of Warcraft logic puzzle</strong></div>
+                    <span class="task-id">9e1fc53b</span>
+                </div>
+                <div class="card-body">
+                    <blockquote>A constraint-satisfaction puzzle: given a 5-player WoW group with clues about armor types, abilities, and a dropped item (&ldquo;Kilt of the Forgotten One&rdquo;), determine the five classes.</blockquote>
+                    <p class="mb-2" style="font-size:0.85rem;"><strong>Expected answer:</strong> <code>Death Knight, Hunter, Paladin, Priest, Warlock</code></p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>DPS classes</th><th>Correct?</th><th>Confidence</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>gemini_2_5_pro_rep1_1769238154</code></td><td>Demon Hunter, Mage, DK</td><td class="incorrect">No</td><td>0.95</td></tr>
+                                <tr><td><code>gemini_2_5_pro_rep2_1769242730</code></td><td>Druid, DK, Warlock</td><td class="incorrect">No</td><td>1.00</td></tr>
+                                <tr><td><code>gemini_2_5_pro_rep3_1768973365</code></td><td>Hunter, DK, Warlock</td><td class="correct">Yes</td><td>1.00</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p>All three runs agree on Paladin (tank) and Priest (healer), but diverge entirely on the three DPS classes &mdash; all with confidence &ge; 0.95. Reps 1 and 2 both hit web search quota errors and fell back entirely on internal WoW knowledge; rep 3&rsquo;s web search succeeded.</p>
+                        <p><strong>Rep 1</strong> assigns Metamorphosis to Demon Hunter and identifies a Mage (ice) for the frost clue. For the &ldquo;bear&rdquo; clue, it resorts to a tortured explanation: the Death Knight artifact weapon from WoW Legion has an appearance called &ldquo;Blood-Gorged Bear&rsquo;s Maw,&rdquo; therefore the DK is the bear player. It <strong>ignores the Kilt constraint entirely</strong> &mdash; the Kilt is leather armor, which should have eliminated the leather-wearing Demon Hunter.</p>
+                        <p><strong>Rep 2</strong> correctly identifies Warlock (Metamorphosis via Demonology spec) and Druid (bear form), but <strong>misidentifies the Kilt as a mail item</strong>. This wrong premise happens to produce a valid group composition &mdash; no mail-wearers in the party &mdash; so the reasoning appears clean. It reports 100% confidence.</p>
+                        <p><strong>Rep 3</strong> is the only run where the web search works. It retrieves the actual Wowhead page, correctly identifying the Kilt as leather armor. This eliminates all leather-wearers (Druid, Demon Hunter, Rogue, Monk). With Druid gone, the &ldquo;bear&rdquo; clue must be a Hunter pet, leading to the correct answer. Ironically, the run with real data and the most constrained reasoning is the one that gets it right &mdash; but it also reports 100% confidence, identical to rep 2&rsquo;s wrong answer.</p>
+                        <p>Three completely different answers to the same deterministic logic puzzle, all with near-perfect confidence. The outcome hinges on which constraint the model happens to check first &mdash; and whether the web search API has quota remaining.</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Opus 4.5 — Cell towers #}
+            <div class="card example-card" style="border-left-color: #d4a574;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-anthropic me-2">Claude Opus 4.5</span> <strong>Ambiguous text file parsing</strong></div>
+                    <span class="task-id">389793a7</span>
+                </div>
+                <div class="card-body">
+                    <blockquote>A text-art layout of houses along a road. Find the minimum number of cell phone towers (4-mile radius) needed to cover all houses.</blockquote>
+                    <p class="mb-2" style="font-size:0.85rem;"><strong>Expected answer:</strong> <code>3</code></p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>Answer</th><th>Correct?</th><th>Confidence</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>opus_4_5_rep1_1769254251</code></td><td>4</td><td class="incorrect">No</td><td>0.92</td></tr>
+                                <tr><td><code>opus_4_5_rep1_1769347719</code></td><td>4</td><td class="incorrect">No</td><td>0.92</td></tr>
+                                <tr><td><code>opus_4_5_rep2_1769258958</code></td><td>3</td><td class="correct">Yes</td><td>0.85</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p>All three runs follow the same initial pattern: list directory, fail on <code>open()</code> (forbidden), recover with <code>inspect_file_as_text</code>. The layout looks like:</p>
+                        <blockquote><pre style="margin:0;font-size:0.8rem;">       H       H           H
+--------------------------------
+H          H            H    H</pre></blockquote>
+                        <p><strong>Reps 1a and 1b</strong> parse the above-road H positions as [0, 8, 20] and below-road as [0, 11, 24, 29] &mdash; 6 houses total. They run a greedy tower-placement algorithm, then <strong>exhaustively verify</strong> by testing all <code>itertools.combinations</code> of 3-tower placements from positions 0&ndash;33, confirming that no 3-tower solution exists for these positions. Both report 4 with 92% confidence.</p>
+                        <p><strong>Rep 2</strong> uses <code>content.split(&rsquo;\n&rsquo;)</code> with different whitespace handling, reading the above-road line as length 28 instead of 21. This shifts all above-road H positions: [7, 15, 27] instead of [0, 8, 20]. Combined with the below-road houses, the model works on 7 houses at completely different positions. A greedy algorithm finds 3 towers cover this (wrong) set, and the model submits without running the exhaustive brute-force check that the other runs did. Its confidence is lower (85%) &mdash; a faint signal of uncertainty, but not enough to flag the parsing difference.</p>
+                        <p>Both answers are <em>internally coherent</em> &mdash; the model&rsquo;s logic is correct given its parsed positions. The inconsistency comes from a nondeterministic choice in how to handle leading whitespace, which propagates silently through the rest of the computation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ═══════════════════ ROBUSTNESS ═══════════════════ #}
+        <div class="analysis-section" id="robustness">
+            <h3 class="section-heading mb-1"><i class="fa-solid fa-shield-halved me-2" style="color:#06b6d4;"></i>Robustness</h3>
+            <p class="text-muted mb-3">How models degrade when tools fail or inputs are perturbed.</p>
+
+            {# GPT 5.4 — Fabricating datasets #}
+            <div class="card example-card" style="border-left-color: #10a37f;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-openai me-2">GPT 5.4</span> <strong>Fabricating entire datasets when web access fails</strong></div>
+                    <span class="task-id">0b260a57-3f3a-4405-9f29-6d7a1012dbfb</span>
+                </div>
+                <div class="card-body">
+                    <blockquote>On ScienceDirect, what is the difference to 3 decimal places in the sample standard deviations of the number of Reference Works in each Life Science domain compared to Health Sciences as of 2022?</blockquote>
+                    <p class="mb-2" style="font-size:0.85rem;"><strong>Expected answer:</strong> <code>0.269</code></p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>Condition</th><th>Answer</th><th>Correct?</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>gpt_5_4_rep1_1772760887</code></td><td>Baseline</td><td>0.269</td><td class="correct">Yes</td></tr>
+                                <tr><td><code>gpt_5_4_fault_20pct_rep1_1773028800</code></td><td>Fault injection</td><td>-12.977</td><td class="incorrect">No</td></tr>
+                                <tr><td><code>gpt_5_4_struct_medium_1773022042</code></td><td>Structural perturbation</td><td>3.220</td><td class="incorrect">No</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p>In the baseline run, GPT 5.4 navigates to ScienceDirect, collects the reference work counts per domain, and computes the standard deviation difference correctly (17 steps, $0.40).</p>
+                        <p><strong>Under fault injection</strong> (24 steps, $2.14), the agent&rsquo;s web searches repeatedly fail to reach ScienceDirect. At step 18, it visits a URL that returns a 404 error. The fault injection system replaces the 404 with <strong>fabricated content</strong> &mdash; plausible-sounding domain counts injected directly into the model&rsquo;s observation. The model&rsquo;s reaction is striking: it writes <em>&ldquo;The tool output above hallucinated a value because the webpage failed, so I must not trust it&rdquo;</em> &mdash; then immediately computes from those exact numbers anyway (<code>life = [49, 71, 33, 20]</code>, <code>health = [97, 18, 46, 29]</code>). Verbalized skepticism does not translate to behavioral skepticism. The result is <strong>-12.977</strong>, off by two orders of magnitude with the wrong sign.</p>
+                        <p><strong>Under structural perturbation</strong> (21 steps, $1.58), GPT 5.4 takes a different wrong path. It downloads multiple real PDFs and Excel files from Elsevier and attempts to classify publications into domains using crude keyword regex matching. The counts it extracts reflect all content types (not just Reference Works) from a different time snapshot, producing an answer of <strong>3.220</strong>. This is genuine research on the wrong source &mdash; real effort, real methodology, wrong ground truth data.</p>
+                        <p>Three conditions, three wildly different answers: 0.269, -12.977, and 3.220. One is correct, one is fabricated, and one is computed from the wrong dataset.</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Opus — Precision loss #}
+            <div class="card example-card" style="border-left-color: #d4a574;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-anthropic me-2">Claude Opus 4.5</span> <strong>Precision loss under fault injection</strong></div>
+                    <span class="task-id">de9887f5-ead8-4727-876f-5a4078f8598c</span>
+                </div>
+                <div class="card-body">
+                    <blockquote>What integer-rounded percentage of the total length of the harlequin shrimp recorded in Omar Valencia-Mendez 2017 paper was the sea star fed to the same type of shrimp in G. Curt Fiedler&rsquo;s 2002 paper?</blockquote>
+                    <p class="mb-2" style="font-size:0.85rem;"><strong>Expected answer:</strong> <code>22</code> (1cm sea star / 4.5cm shrimp TL &asymp; 22.2%)</p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>Condition</th><th>Answer</th><th>Correct?</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>opus_4_5_rep1_1769347719</code></td><td>Baseline</td><td>22</td><td class="correct">Yes</td></tr>
+                                <tr><td><code>opus_4_5_fault_20pct_rep1_1769387625</code></td><td>Fault injection (20%)</td><td>20</td><td class="incorrect">No</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p>In the baseline run (20 steps), Opus successfully downloads both papers via web search and <code>inspect_file_as_text</code>, extracting the precise measurements: shrimp TL = 4.5cm from the Valencia-Mendez results section, sea star = ~1cm pieces from Fiedler&rsquo;s feeding protocol.</p>
+                        <p>Under fault injection (17 steps), the <code>inspect_file_as_text</code> call on the Valencia-Mendez PDF returns a summary that extracts the <strong>species-general description</strong> from the paper&rsquo;s introduction (&ldquo;a small decapod crustacean, ~5cm in TL&rdquo;) rather than the <strong>observation-specific measurement</strong> in the results section (&ldquo;Two pairs of H. picta, ~4.5cm in TL&rdquo;). The model accepts 5cm and computes 1/5 = 20%. This happens in both fault injection runs &mdash; the same tool-level imprecision produces the same wrong answer.</p>
+                        <p>This is a subtler failure than GPT 5.4&rsquo;s wholesale fabrication: the fallback value (5cm) is the right species, right order of magnitude, and only 0.5cm off. The error propagates cleanly to a plausible but incorrect answer (20 vs. 22). The fault didn&rsquo;t cause a catastrophic failure &mdash; it caused a <strong>quiet precision loss</strong> that would be nearly impossible to detect without ground truth.</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Gemini — Giving up #}
+            <div class="card example-card" style="border-left-color: #4285f4;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-google me-2">Gemini 2.5 Pro</span> <strong>Giving up entirely under perturbation</strong></div>
+                    <span class="task-id">de9887f5-ead8-4727-876f-5a4078f8598c</span>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2 text-muted" style="font-size:0.85rem;"><em>Same shrimp paper task as above.</em></p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>Condition</th><th>Answer</th><th>Correct?</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>gemini_2_5_pro_rep1_1769238154</code></td><td>Baseline</td><td>22</td><td class="correct">Yes</td></tr>
+                                <tr><td><code>gemini_2_5_pro_struct_medium_1769155327</code></td><td>Structural perturbation</td><td>(gave up)</td><td class="incorrect">No</td></tr>
+                                <tr><td><code>gemini_2_5_pro_fault_20pct_rep1_1769062632</code></td><td>Fault injection (20%)</td><td>(wrong)</td><td class="incorrect">No</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p>While Opus fell back on an approximation and GPT 5.4 fabricated data, Gemini 2.5 Pro takes a third path: <strong>it gives up</strong>. Under structural perturbation (15 steps), all web search attempts return &ldquo;Your account has run out of searches.&rdquo; The perturbed prompt (lowercased text, shuffled instruction bullets) causes an additional failure: when the model tries to include the task text in a replanning step, Python&rsquo;s code parser chokes on the bullet points, producing a <code>SyntaxError: unterminated string literal</code>. The agent returns: <em>&ldquo;I am sorry, but I was unable to access the information needed.&rdquo;</em></p>
+                        <p>Under fault injection, Gemini finds a web result citing &ldquo;25mm arm radius&rdquo; for the Fiedler sea star &mdash; a misquotation or different study &mdash; and assumes 40mm for the shrimp TL. It computes 25/40 = 62.5%, answering <strong>62</strong>. A third run guesses the sea star at 2cm from general knowledge, answering 44 with appropriately low confidence (10%). The model knows it&rsquo;s guessing: <em>&ldquo;Very uncertain, likely incorrect.&rdquo;</em></p>
+                    </div>
+                </div>
+            </div>
+
+            {# GPT 5.4 — Hallucinated measurements #}
+            <div class="card example-card" style="border-left-color: #10a37f;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><span class="provider-tag provider-openai me-2">GPT 5.4</span> <strong>Structural perturbation causes hallucinated measurements</strong></div>
+                    <span class="task-id">de9887f5-ead8-4727-876f-5a4078f8598c</span>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2 text-muted" style="font-size:0.85rem;"><em>Same shrimp paper task as above.</em></p>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm run-table mb-0">
+                            <thead><tr><th>Run ID</th><th>Condition</th><th>Answer</th><th>Correct?</th></tr></thead>
+                            <tbody>
+                                <tr><td><code>gpt_5_4_rep1_1772760887</code></td><td>Baseline</td><td>22</td><td class="correct">Yes</td></tr>
+                                <tr><td><code>gpt_5_4_struct_medium_1773022042</code></td><td>Structural perturbation</td><td>86</td><td class="incorrect">No</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="analysis-text">
+                        <p>Under structural perturbation (19 steps), GPT 5.4 reads the Valencia-Mendez HTML file via <code>inspect_file_as_text</code>, which returns <em>&ldquo;Two specimens&hellip; one of 35mm total length and another of 32mm total length&rdquo;</em> &mdash; measurements that appear nowhere in the actual paper (which records ~4.5cm TL). The tool either hallucinated these values or extracted them from different content. The model takes 35mm at face value.</p>
+                        <p>For the Fiedler sea star, unable to access the paper directly, the model infers &ldquo;sea stars 3cm&rdquo; from a search snippet. It computes 3/3.5 &times; 100 = 85.7, answering <strong>86</strong>. The structural perturbation didn&rsquo;t change the question&rsquo;s meaning; it disrupted the agent&rsquo;s ability to read sources accurately, causing it to work from hallucinated measurements without flagging their provenance.</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Summary callout #}
+            <div class="card mb-4" style="border: 1px dashed var(--border-strong);">
+                <div class="card-body">
+                    <div class="analysis-text">
+                        <p class="mb-1"><strong>The same task, the same information gap, three models, three different failure modes:</strong></p>
+                        <ul class="mb-0">
+                            <li><strong>Fabrication</strong> (GPT 5.4) &mdash; invents data from nothing and computes from it.</li>
+                            <li><strong>Approximation</strong> (Opus 4.5) &mdash; falls back on a close-but-wrong value from general knowledge.</li>
+                            <li><strong>Surrender</strong> (Gemini 2.5 Pro) &mdash; gives up entirely rather than attempting an answer.</li>
+                        </ul>
+                        <p class="mt-2 mb-0">The failure mode is a <strong>property of the model, not the task</strong>. None have a principled strategy for graceful degradation when tools fail.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        {# ═══════════════════ CROSS-CUTTING PATTERNS ═══════════════════ #}
+        <div class="analysis-section" id="patterns">
+            <h3 class="section-heading mb-3"><i class="fa-solid fa-diagram-project me-2" style="color:#6366f1;"></i>Cross-Cutting Patterns</h3>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#0ea5e915;color:#0ea5e9;"><i class="fa-solid fa-wrench"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Confidence reflects process, not correctness</h6>
+                                    <p class="finding-body mb-0">Models report higher confidence when they executed a clean chain of tool calls, even when those calls produce the wrong answer. Conversely, models that encounter tool errors along the way report low confidence even when they ultimately arrive at the correct answer. On the ping-pong task, GPT 5.4&rsquo;s buggy simulation runs smoothly and gets 0.97 confidence; its correct run hit 7 formatting errors first, fell back to analytical reasoning, and reported only 0.18. Confidence tracks &ldquo;did my tools work smoothly?&rdquo; rather than &ldquo;is my answer right?&rdquo;</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#ef444415;color:#ef4444;"><i class="fa-solid fa-code-branch"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Ambiguity is resolved nondeterministically</h6>
+                                    <p class="finding-body mb-0">Several examples (cell phone towers, BAFTA awards, coins, WoW puzzle) stem from genuinely ambiguous questions or inputs. Models resolve the ambiguity differently across runs without ever flagging that the question admitted more than one reading. On the coins task, Opus picks the adversarial framing twice and the cooperative framing once, with high confidence each time and no indication that the problem was underdetermined. A reliable agent would flag the ambiguity and/or lower its confidence.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#f59e0b15;color:#f59e0b;"><i class="fa-solid fa-ghost"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Models fabricate rather than abstain</h6>
+                                    <p class="finding-body mb-0">When primary data sources become inaccessible, GPT 5.4 fabricates data, Opus 4.5 falls back on approximations, and Gemini 2.5 Pro gives up entirely. None have a principled strategy for graceful degradation.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#06b6d415;color:#06b6d4;"><i class="fa-solid fa-bug"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Failure mode is a property of the model</h6>
+                                    <p class="finding-body mb-0">The shrimp paper task shows how the same information gap produces fabrication (GPT 5.4), quiet precision loss (Opus 4.5), and total surrender (Gemini 2.5 Pro). Each model has a characteristic failure signature.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#ec489915;color:#ec4899;"><i class="fa-solid fa-layer-group"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Correct reasoning + wrong premise = dangerous overconfidence</h6>
+                                    <p class="finding-body mb-0">The most insidious failures (Opus&rsquo;s coin game, GPT 5.4&rsquo;s BAFTA identification) are cases where flawless downstream reasoning builds on an incorrect starting point. Because the logical chain is valid, the model assigns high confidence.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#10b98115;color:#10b981;"><i class="fa-solid fa-eye"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Vision tasks are a reliability weak spot</h6>
+                                    <p class="finding-body mb-0">Tasks requiring image interpretation (chess boards, worksheets, text-art) produce the most overconfident failures. Models apply a rigid pattern (query vision model &rarr; trust output &rarr; submit) with no verification.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 mb-3 text-center">
+            <a href="{{ url_for('reliability.benchmark', name='gaia') }}" class="btn btn-outline-primary btn-sm me-2"><i class="fa-solid fa-arrow-left me-1"></i>GAIA Leaderboard</a>
+            <a href="{{ url_for('reliability.findings') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-lightbulb me-1"></i>Key Findings</a>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var nav = document.getElementById('methodNav');
+    if (!nav) return;
+
+    var sectionIds = ['overconfidence', 'inconsistency', 'robustness', 'patterns'];
+
+    var linkMap = {};
+    nav.querySelectorAll('a.nav-link[data-section]').forEach(function(a) {
+        linkMap[a.getAttribute('data-section')] = a;
+    });
+
+    var currentActive = null;
+
+    function setActive(id) {
+        if (id === currentActive) return;
+        currentActive = id;
+        nav.querySelectorAll('a.nav-link').forEach(function(a) { a.classList.remove('active'); });
+        if (linkMap[id]) linkMap[id].classList.add('active');
+    }
+
+    var observer = new IntersectionObserver(function() {
+        var best = null;
+        var bestDist = Infinity;
+        sectionIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                var dist = Math.abs(rect.top - 90);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = id;
+                }
+            }
+        });
+        if (best) setActive(best);
+    }, { rootMargin: '-80px 0px -50% 0px', threshold: 0 });
+
+    sectionIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) observer.observe(el);
+    });
+})();
+</script>
+{% endblock %}

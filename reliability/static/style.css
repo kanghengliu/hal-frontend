@@ -252,7 +252,7 @@ a:hover {
 .card-header {
     background: transparent;
     border-bottom: 1px solid var(--border);
-    padding: 1rem 1.25rem;
+    padding: 1.25rem 1.25rem 0.25rem;
 }
 .card-header h5,
 .card-header h6 {

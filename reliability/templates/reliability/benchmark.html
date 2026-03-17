@@ -17,6 +17,9 @@
 {% elif name == 'taubench_airline' %}
 <p class="mb-4"><a href="{{ url_for('reliability.compare_taubench') }}" class="text-decoration-none">Compare with original dataset (all 50 tasks) &rarr;</a></p>
 {% endif %}
+{% if name == 'gaia' %}
+<p class="mb-4"><a href="{{ url_for('reliability.benchmark_analysis', bench='gaia') }}" class="text-decoration-none"><i class="fa-solid fa-magnifying-glass-chart me-1"></i>Reliability failure analysis &mdash; concrete examples of inconsistency, overconfidence, and robustness failures &rarr;</a></p>
+{% endif %}
 {% endif %}
 
 <!-- Dimension Bar Charts -->

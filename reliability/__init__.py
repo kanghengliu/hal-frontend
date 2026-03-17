@@ -730,6 +730,14 @@ def agent_benchmark(slug, bench):
     )
 
 
+@reliability_bp.route("/benchmark/<bench>/analysis/")
+def benchmark_analysis(bench):
+    if bench not in BENCHMARKS:
+        abort(404)
+    template = f"reliability/analysis_{bench}.html"
+    return render_template(template, benchmark=bench, benchmarks=list(BENCHMARKS.keys()))
+
+
 @reliability_bp.route("/compare/taubench/")
 def compare_taubench():
     full_name = "taubench_airline_original"
