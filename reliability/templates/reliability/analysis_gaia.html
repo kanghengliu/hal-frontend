@@ -35,10 +35,10 @@
             <nav class="nav flex-column small" id="methodNav">
                 <a class="nav-link fw-semibold mb-2" href="{{ url_for('reliability.benchmark', name='gaia') }}"><i class="fa-solid fa-arrow-left me-1"></i>GAIA Leaderboard</a>
                 <hr class="my-1">
+                <a class="nav-link" href="#patterns" data-section="patterns"><i class="fa-solid fa-diagram-project me-1"></i>Cross-Cutting Patterns</a>
                 <a class="nav-link" href="#overconfidence" data-section="overconfidence"><i class="fa-solid fa-circle-exclamation me-1"></i>Overconfidence</a>
                 <a class="nav-link" href="#inconsistency" data-section="inconsistency"><i class="fa-solid fa-arrows-rotate me-1"></i>Inconsistency</a>
                 <a class="nav-link" href="#robustness" data-section="robustness"><i class="fa-solid fa-shield-halved me-1"></i>Robustness</a>
-                <a class="nav-link" href="#patterns" data-section="patterns"><i class="fa-solid fa-diagram-project me-1"></i>Cross-Cutting Patterns</a>
             </nav>
         </div>
     </div>
@@ -63,6 +63,91 @@
                     <p class="mb-2"><i class="fa-solid fa-circle-info me-1" style="color:#9ca3af;"></i><strong>A note on ambiguity.</strong> Several of the failures below stem from genuinely ambiguous questions or inputs &mdash; tasks where the &ldquo;correct&rdquo; answer depends on an interpretation the benchmark authors likely assumed was obvious but isn&rsquo;t. GAIA was designed to test general-purpose assistant capabilities, not to stress-test edge cases in question wording, and some ambiguity is inevitable in a benchmark of this scope.</p>
                     <p class="mb-2">That said, ambiguity turns out to be a <em>useful</em> lens for reliability. A well-calibrated agent encountering a question with competing valid interpretations should recognize the ambiguity and lower its confidence accordingly &mdash; or flag the competing readings rather than silently committing to one. In the examples below, models almost never do this. They resolve ambiguity nondeterministically across runs, report high confidence regardless of which interpretation they chose, and give no signal that the question admitted more than one reading.</p>
                     <p class="mb-0">The issue isn&rsquo;t that the models get the &ldquo;wrong&rdquo; answer on an ambiguous question &mdash; it&rsquo;s that they don&rsquo;t behave differently when a question <em>is</em> ambiguous versus when it isn&rsquo;t.</p>
+                </div>
+            </div>
+        </div>
+
+        {# ═══════════════════ CROSS-CUTTING PATTERNS ═══════════════════ #}
+        <div class="analysis-section" id="patterns">
+            <h3 class="section-heading mb-3"><i class="fa-solid fa-diagram-project me-2" style="color:#6366f1;"></i>Cross-Cutting Patterns</h3>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#0ea5e915;color:#0ea5e9;"><i class="fa-solid fa-wrench"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Models confuse a clean process with a correct answer.</h6>
+                                    <p class="finding-body mb-0">Models report higher confidence when they executed a clean chain of tool calls, even when those calls produce the wrong answer. Conversely, models that encounter tool errors along the way report low confidence even when they ultimately arrive at the correct answer. On the ping-pong task, GPT 5.4&rsquo;s buggy simulation runs smoothly and gets 0.97 confidence; its correct run hit 7 formatting errors first, fell back to analytical reasoning, and reported only 0.18. Confidence tracks &ldquo;did my tools work smoothly?&rdquo; rather than &ldquo;is my answer right?&rdquo;</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#ef444415;color:#ef4444;"><i class="fa-solid fa-code-branch"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Models struggle to resolve ambiguity.</h6>
+                                    <p class="finding-body mb-0">Several examples (cell phone towers, BAFTA awards, coins, WoW puzzle) stem from genuinely ambiguous questions or inputs. Models resolve the ambiguity differently across runs without ever flagging that the question admitted more than one reading. On the coins task, Opus picks the adversarial framing twice and the cooperative framing once, with high confidence each time and no indication that the problem was underdetermined. A reliable agent would flag the ambiguity and/or lower its confidence.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#f59e0b15;color:#f59e0b;"><i class="fa-solid fa-ghost"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Models often fabricate rather than abstain.</h6>
+                                    <p class="finding-body mb-0">When primary data sources become inaccessible, GPT 5.4 fabricates data, Opus 4.5 falls back on approximations, and Gemini 2.5 Pro gives up entirely. None have a principled strategy for graceful degradation.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#06b6d415;color:#06b6d4;"><i class="fa-solid fa-bug"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Models flag bad data, then use it anyway.</h6>
+                                    <p class="finding-body mb-0">The shrimp paper task shows how the same information gap produces fabrication (GPT 5.4), quiet precision loss (Opus 4.5), and total surrender (Gemini 2.5 Pro). Each model has a characteristic failure signature.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#ec489915;color:#ec4899;"><i class="fa-solid fa-layer-group"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Correct reasoning + wrong premise = overconfidence.</h6>
+                                    <p class="finding-body mb-0">The most insidious failures (Opus&rsquo;s coin game, GPT 5.4&rsquo;s BAFTA identification) are cases where flawless downstream reasoning builds on an incorrect starting point. Because the logical chain is valid, the model assigns high confidence.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card pattern-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="finding-icon-wrap me-3" style="background:#10b98115;color:#10b981;"><i class="fa-solid fa-eye"></i></div>
+                                <div>
+                                    <h6 class="finding-title mb-1">Vision tasks are a reliability weak spot.</h6>
+                                    <p class="finding-body mb-0">Tasks requiring image interpretation (chess boards, worksheets, text-art) produce the most overconfident failures. Models apply a rigid pattern (query vision model &rarr; trust output &rarr; submit) with no verification.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -394,91 +479,6 @@ H          H            H    H</pre></blockquote>
 
         </div>
 
-        {# ═══════════════════ CROSS-CUTTING PATTERNS ═══════════════════ #}
-        <div class="analysis-section" id="patterns">
-            <h3 class="section-heading mb-3"><i class="fa-solid fa-diagram-project me-2" style="color:#6366f1;"></i>Cross-Cutting Patterns</h3>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="card pattern-card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start mb-2">
-                                <div class="finding-icon-wrap me-3" style="background:#0ea5e915;color:#0ea5e9;"><i class="fa-solid fa-wrench"></i></div>
-                                <div>
-                                    <h6 class="finding-title mb-1">Confidence reflects process, not correctness</h6>
-                                    <p class="finding-body mb-0">Models report higher confidence when they executed a clean chain of tool calls, even when those calls produce the wrong answer. Conversely, models that encounter tool errors along the way report low confidence even when they ultimately arrive at the correct answer. On the ping-pong task, GPT 5.4&rsquo;s buggy simulation runs smoothly and gets 0.97 confidence; its correct run hit 7 formatting errors first, fell back to analytical reasoning, and reported only 0.18. Confidence tracks &ldquo;did my tools work smoothly?&rdquo; rather than &ldquo;is my answer right?&rdquo;</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card pattern-card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start mb-2">
-                                <div class="finding-icon-wrap me-3" style="background:#ef444415;color:#ef4444;"><i class="fa-solid fa-code-branch"></i></div>
-                                <div>
-                                    <h6 class="finding-title mb-1">Ambiguity is resolved nondeterministically</h6>
-                                    <p class="finding-body mb-0">Several examples (cell phone towers, BAFTA awards, coins, WoW puzzle) stem from genuinely ambiguous questions or inputs. Models resolve the ambiguity differently across runs without ever flagging that the question admitted more than one reading. On the coins task, Opus picks the adversarial framing twice and the cooperative framing once, with high confidence each time and no indication that the problem was underdetermined. A reliable agent would flag the ambiguity and/or lower its confidence.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card pattern-card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start mb-2">
-                                <div class="finding-icon-wrap me-3" style="background:#f59e0b15;color:#f59e0b;"><i class="fa-solid fa-ghost"></i></div>
-                                <div>
-                                    <h6 class="finding-title mb-1">Models fabricate rather than abstain</h6>
-                                    <p class="finding-body mb-0">When primary data sources become inaccessible, GPT 5.4 fabricates data, Opus 4.5 falls back on approximations, and Gemini 2.5 Pro gives up entirely. None have a principled strategy for graceful degradation.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card pattern-card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start mb-2">
-                                <div class="finding-icon-wrap me-3" style="background:#06b6d415;color:#06b6d4;"><i class="fa-solid fa-bug"></i></div>
-                                <div>
-                                    <h6 class="finding-title mb-1">Failure mode is a property of the model</h6>
-                                    <p class="finding-body mb-0">The shrimp paper task shows how the same information gap produces fabrication (GPT 5.4), quiet precision loss (Opus 4.5), and total surrender (Gemini 2.5 Pro). Each model has a characteristic failure signature.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card pattern-card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start mb-2">
-                                <div class="finding-icon-wrap me-3" style="background:#ec489915;color:#ec4899;"><i class="fa-solid fa-layer-group"></i></div>
-                                <div>
-                                    <h6 class="finding-title mb-1">Correct reasoning + wrong premise = dangerous overconfidence</h6>
-                                    <p class="finding-body mb-0">The most insidious failures (Opus&rsquo;s coin game, GPT 5.4&rsquo;s BAFTA identification) are cases where flawless downstream reasoning builds on an incorrect starting point. Because the logical chain is valid, the model assigns high confidence.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card pattern-card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start mb-2">
-                                <div class="finding-icon-wrap me-3" style="background:#10b98115;color:#10b981;"><i class="fa-solid fa-eye"></i></div>
-                                <div>
-                                    <h6 class="finding-title mb-1">Vision tasks are a reliability weak spot</h6>
-                                    <p class="finding-body mb-0">Tasks requiring image interpretation (chess boards, worksheets, text-art) produce the most overconfident failures. Models apply a rigid pattern (query vision model &rarr; trust output &rarr; submit) with no verification.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="mt-4 mb-3 text-center">
             <a href="{{ url_for('reliability.benchmark', name='gaia') }}" class="btn btn-outline-primary btn-sm me-2"><i class="fa-solid fa-arrow-left me-1"></i>GAIA Leaderboard</a>
             <a href="{{ url_for('reliability.findings') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-lightbulb me-1"></i>Key Findings</a>
@@ -491,7 +491,7 @@ H          H            H    H</pre></blockquote>
     var nav = document.getElementById('methodNav');
     if (!nav) return;
 
-    var sectionIds = ['overconfidence', 'inconsistency', 'robustness', 'patterns'];
+    var sectionIds = ['patterns', 'overconfidence', 'inconsistency', 'robustness'];
 
     var linkMap = {};
     nav.querySelectorAll('a.nav-link[data-section]').forEach(function(a) {
