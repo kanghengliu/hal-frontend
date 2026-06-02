@@ -3,461 +3,503 @@
     "agent": "taubench_toolcalling_gpt_4_turbo",
     "display_name": "GPT-4 Turbo",
     "provider": "OpenAI",
-    "accuracy": 0.5,
-    "A_rate": 0.4307692307692308,
-    "A_prec": 0.39285714285714285,
-    "A_rec": 0.3384615384615385,
-    "A_sel": 0.4189189189189189,
-    "A_cal": 0.4076923076923077,
+    "accuracy": 0.5769230769230769,
+    "abstention_rate": 0.3333333333333333,
+    "abstention_precision": 0.2692307692307692,
+    "abstention_recall": 0.21212121212121213,
+    "abstention_selective_accuracy": 0.5,
+    "abstention_calibration": 0.4230769230769231,
     "confusion_matrix": {
-      "abstained_and_failed": 22,
-      "abstained_and_succeeded": 34,
-      "proceeded_and_failed": 43,
-      "proceeded_and_succeeded": 31
+      "abstained_and_failed": 7,
+      "abstained_and_succeeded": 19,
+      "proceeded_and_failed": 26,
+      "proceeded_and_succeeded": 26
     },
     "type_breakdown": {
       "none": {
-        "count": 62,
-        "success_rate": 0.43548387096774194
+        "count": 49,
+        "success_rate": 0.46938775510204084
       },
       "clarification": {
-        "count": 28,
-        "success_rate": 0.39285714285714285
+        "count": 10,
+        "success_rate": 0.7
       },
       "inability": {
-        "count": 39,
-        "success_rate": 0.6923076923076923
-      },
-      "refusal": {
-        "count": 1,
-        "success_rate": 0.0
+        "count": 19,
+        "success_rate": 0.7894736842105263
       }
     },
-    "n_tasks": 130,
-    "n_abstained": 56
+    "n_tasks": 78,
+    "n_abstained": 26
   },
   "taubench_toolcalling_gpt_4o_mini": {
     "agent": "taubench_toolcalling_gpt_4o_mini",
     "display_name": "GPT-4o mini",
     "provider": "OpenAI",
-    "accuracy": 0.32051282051282054,
-    "A_rate": 0.4358974358974359,
-    "A_prec": 0.5,
-    "A_rec": 0.32075471698113206,
-    "A_sel": 0.18181818181818182,
-    "A_cal": 0.32051282051282054,
+    "accuracy": 0.2948717948717949,
+    "abstention_rate": 0.38461538461538464,
+    "abstention_precision": 0.43333333333333335,
+    "abstention_recall": 0.23636363636363636,
+    "abstention_selective_accuracy": 0.125,
+    "abstention_calibration": 0.24358974358974358,
     "confusion_matrix": {
-      "abstained_and_failed": 17,
+      "abstained_and_failed": 13,
       "abstained_and_succeeded": 17,
-      "proceeded_and_failed": 36,
-      "proceeded_and_succeeded": 8
+      "proceeded_and_failed": 42,
+      "proceeded_and_succeeded": 6
     },
     "type_breakdown": {
-      "clarification": {
-        "count": 7,
-        "success_rate": 0.14285714285714285
-      },
       "none": {
-        "count": 38,
-        "success_rate": 0.18421052631578946
+        "count": 44,
+        "success_rate": 0.11363636363636363
       },
       "inability": {
-        "count": 31,
-        "success_rate": 0.5161290322580645
+        "count": 27,
+        "success_rate": 0.6296296296296297
+      },
+      "clarification": {
+        "count": 5,
+        "success_rate": 0.2
       },
       "refusal": {
         "count": 2,
-        "success_rate": 0.5
+        "success_rate": 0.0
       }
     },
     "n_tasks": 78,
-    "n_abstained": 34
+    "n_abstained": 30
   },
   "taubench_toolcalling_gpt_o1": {
     "agent": "taubench_toolcalling_gpt_o1",
     "display_name": "o1",
     "provider": "OpenAI",
-    "accuracy": 0.7230769230769231,
-    "A_rate": 0.05384615384615385,
-    "A_prec": 0.14285714285714285,
-    "A_rec": 0.027777777777777776,
-    "A_sel": 0.7154471544715447,
-    "A_cal": 0.6846153846153846,
+    "accuracy": 0.6623376623376623,
+    "abstention_rate": 0.05194805194805195,
+    "abstention_precision": 0.0,
+    "abstention_recall": 0.0,
+    "abstention_selective_accuracy": 0.6438356164383562,
+    "abstention_calibration": 0.6103896103896104,
     "confusion_matrix": {
-      "abstained_and_failed": 1,
-      "abstained_and_succeeded": 6,
-      "proceeded_and_failed": 35,
-      "proceeded_and_succeeded": 88
+      "abstained_and_failed": 0,
+      "abstained_and_succeeded": 4,
+      "proceeded_and_failed": 26,
+      "proceeded_and_succeeded": 47
     },
     "type_breakdown": {
       "none": {
-        "count": 112,
-        "success_rate": 0.6964285714285714
+        "count": 70,
+        "success_rate": 0.6428571428571429
+      },
+      "refusal": {
+        "count": 1,
+        "success_rate": 1.0
       },
       "inability": {
-        "count": 2,
+        "count": 1,
         "success_rate": 1.0
       },
       "clarification": {
-        "count": 14,
-        "success_rate": 0.8571428571428571
-      },
-      "refusal": {
-        "count": 2,
-        "success_rate": 1.0
+        "count": 5,
+        "success_rate": 0.8
       }
     },
-    "n_tasks": 130,
-    "n_abstained": 7
+    "n_tasks": 77,
+    "n_abstained": 4
   },
   "taubench_toolcalling_gpt_5_2": {
     "agent": "taubench_toolcalling_gpt_5_2",
     "display_name": "GPT 5.2",
     "provider": "OpenAI",
-    "accuracy": 0.5923076923076923,
-    "A_rate": 0.015384615384615385,
-    "A_prec": 0.0,
-    "A_rec": 0.0,
-    "A_sel": 0.5859375,
-    "A_cal": 0.5769230769230769,
-    "confusion_matrix": {
-      "abstained_and_failed": 0,
-      "abstained_and_succeeded": 2,
-      "proceeded_and_failed": 53,
-      "proceeded_and_succeeded": 75
-    },
-    "type_breakdown": {
-      "none": {
-        "count": 126,
-        "success_rate": 0.5873015873015873
-      },
-      "inability": {
-        "count": 1,
-        "success_rate": 1.0
-      },
-      "clarification": {
-        "count": 2,
-        "success_rate": 0.5
-      },
-      "refusal": {
-        "count": 1,
-        "success_rate": 1.0
-      }
-    },
-    "n_tasks": 130,
-    "n_abstained": 2
-  },
-  "taubench_toolcalling_gpt_5_2_xhigh": {
-    "agent": "taubench_toolcalling_gpt_5_2_xhigh",
-    "display_name": "GPT 5.2 (xhigh)",
-    "provider": "OpenAI",
-    "accuracy": 0.676923076923077,
-    "A_rate": 0.007692307692307693,
-    "A_prec": 0.0,
-    "A_rec": 0.0,
-    "A_sel": 0.6744186046511628,
-    "A_cal": 0.6692307692307692,
+    "accuracy": 0.6025641025641025,
+    "abstention_rate": 0.01282051282051282,
+    "abstention_precision": 0.0,
+    "abstention_recall": 0.0,
+    "abstention_selective_accuracy": 0.5974025974025974,
+    "abstention_calibration": 0.5897435897435898,
     "confusion_matrix": {
       "abstained_and_failed": 0,
       "abstained_and_succeeded": 1,
-      "proceeded_and_failed": 42,
-      "proceeded_and_succeeded": 87
+      "proceeded_and_failed": 31,
+      "proceeded_and_succeeded": 46
     },
     "type_breakdown": {
       "none": {
-        "count": 127,
-        "success_rate": 0.6692913385826772
+        "count": 75,
+        "success_rate": 0.5866666666666667
       },
       "clarification": {
-        "count": 3,
+        "count": 2,
+        "success_rate": 1.0
+      },
+      "refusal": {
+        "count": 1,
         "success_rate": 1.0
       }
     },
-    "n_tasks": 130,
+    "n_tasks": 78,
     "n_abstained": 1
   },
-  "taubench_toolcalling_gemini_2_flash": {
-    "agent": "taubench_toolcalling_gemini_2_flash",
-    "display_name": "Gemini 2.0 Flash",
-    "provider": "Google",
-    "accuracy": 0.4461538461538462,
-    "A_rate": 0.45384615384615384,
-    "A_prec": 0.3559322033898305,
-    "A_rec": 0.2916666666666667,
-    "A_sel": 0.28169014084507044,
-    "A_cal": 0.3153846153846154,
+  "taubench_toolcalling_gpt_5_2_medium": {
+    "agent": "taubench_toolcalling_gpt_5_2_medium",
+    "display_name": "GPT 5.2 (medium)",
+    "provider": "OpenAI",
+    "accuracy": 0.6794871794871795,
+    "abstention_rate": 0.01282051282051282,
+    "abstention_precision": 0.0,
+    "abstention_recall": 0.0,
+    "abstention_selective_accuracy": 0.6753246753246753,
+    "abstention_calibration": 0.6666666666666666,
     "confusion_matrix": {
-      "abstained_and_failed": 21,
-      "abstained_and_succeeded": 38,
-      "proceeded_and_failed": 51,
-      "proceeded_and_succeeded": 20
+      "abstained_and_failed": 0,
+      "abstained_and_succeeded": 1,
+      "proceeded_and_failed": 25,
+      "proceeded_and_succeeded": 52
     },
     "type_breakdown": {
       "none": {
-        "count": 58,
-        "success_rate": 0.3275862068965517
+        "count": 75,
+        "success_rate": 0.6666666666666666
       },
       "clarification": {
-        "count": 15,
-        "success_rate": 0.13333333333333333
+        "count": 2,
+        "success_rate": 1.0
       },
       "inability": {
-        "count": 55,
-        "success_rate": 0.6545454545454545
-      },
-      "refusal": {
-        "count": 2,
-        "success_rate": 0.5
+        "count": 1,
+        "success_rate": 1.0
       }
     },
-    "n_tasks": 130,
-    "n_abstained": 59
+    "n_tasks": 78,
+    "n_abstained": 1
+  },
+  "taubench_toolcalling_gpt_5_5": {
+    "agent": "taubench_toolcalling_gpt_5_5",
+    "display_name": "GPT 5.5",
+    "provider": "OpenAI",
+    "accuracy": 0.7948717948717948,
+    "abstention_rate": 0.08974358974358974,
+    "abstention_precision": 0.42857142857142855,
+    "abstention_recall": 0.1875,
+    "abstention_selective_accuracy": 0.8169014084507042,
+    "abstention_calibration": 0.782051282051282,
+    "confusion_matrix": {
+      "abstained_and_failed": 3,
+      "abstained_and_succeeded": 4,
+      "proceeded_and_failed": 13,
+      "proceeded_and_succeeded": 58
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 71,
+        "success_rate": 0.8169014084507042
+      },
+      "inability": {
+        "count": 7,
+        "success_rate": 0.5714285714285714
+      }
+    },
+    "n_tasks": 78,
+    "n_abstained": 7
   },
   "taubench_toolcalling_gemini_2_5_flash": {
     "agent": "taubench_toolcalling_gemini_2_5_flash",
     "display_name": "Gemini 2.5 Flash",
     "provider": "Google",
-    "accuracy": 0.6538461538461539,
-    "A_rate": 0.7076923076923077,
-    "A_prec": 0.2608695652173913,
-    "A_rec": 0.5333333333333333,
-    "A_sel": 0.4473684210526316,
-    "A_cal": 0.3153846153846154,
+    "accuracy": 0.5897435897435898,
+    "abstention_rate": 0.6153846153846154,
+    "abstention_precision": 0.22916666666666666,
+    "abstention_recall": 0.34375,
+    "abstention_selective_accuracy": 0.3,
+    "abstention_calibration": 0.2564102564102564,
     "confusion_matrix": {
-      "abstained_and_failed": 24,
-      "abstained_and_succeeded": 68,
+      "abstained_and_failed": 11,
+      "abstained_and_succeeded": 37,
       "proceeded_and_failed": 21,
-      "proceeded_and_succeeded": 17
+      "proceeded_and_succeeded": 9
     },
     "type_breakdown": {
       "inability": {
-        "count": 86,
-        "success_rate": 0.7441860465116279
+        "count": 46,
+        "success_rate": 0.782608695652174
       },
       "none": {
-        "count": 27,
-        "success_rate": 0.4444444444444444
+        "count": 24,
+        "success_rate": 0.2916666666666667
       },
       "clarification": {
-        "count": 13,
-        "success_rate": 0.5384615384615384
-      },
-      "refusal": {
-        "count": 4,
-        "success_rate": 0.5
+        "count": 8,
+        "success_rate": 0.375
       }
     },
-    "n_tasks": 130,
-    "n_abstained": 92
+    "n_tasks": 78,
+    "n_abstained": 48
   },
   "taubench_toolcalling_gemini_2_5_pro": {
     "agent": "taubench_toolcalling_gemini_2_5_pro",
     "display_name": "Gemini 2.5 Pro",
     "provider": "Google",
-    "accuracy": 0.7384615384615385,
-    "A_rate": 0.5461538461538461,
-    "A_prec": 0.14084507042253522,
-    "A_rec": 0.29411764705882354,
-    "A_sel": 0.5932203389830508,
-    "A_cal": 0.34615384615384615,
+    "accuracy": 0.717948717948718,
+    "abstention_rate": 0.7051282051282052,
+    "abstention_precision": 0.23636363636363636,
+    "abstention_recall": 0.5909090909090909,
+    "abstention_selective_accuracy": 0.6086956521739131,
+    "abstention_calibration": 0.34615384615384615,
     "confusion_matrix": {
-      "abstained_and_failed": 10,
-      "abstained_and_succeeded": 61,
-      "proceeded_and_failed": 24,
-      "proceeded_and_succeeded": 35
+      "abstained_and_failed": 13,
+      "abstained_and_succeeded": 42,
+      "proceeded_and_failed": 9,
+      "proceeded_and_succeeded": 14
     },
     "type_breakdown": {
       "none": {
-        "count": 50,
-        "success_rate": 0.58
-      },
-      "clarification": {
-        "count": 12,
-        "success_rate": 0.6666666666666666
+        "count": 21,
+        "success_rate": 0.6190476190476191
       },
       "inability": {
-        "count": 66,
-        "success_rate": 0.8787878787878788
-      },
-      "refusal": {
-        "count": 2,
-        "success_rate": 0.5
-      }
-    },
-    "n_tasks": 130,
-    "n_abstained": 71
-  },
-  "taubench_toolcalling_gemini_3_pro": {
-    "agent": "taubench_toolcalling_gemini_3_pro",
-    "display_name": "Gemini 3.0 Pro",
-    "provider": "Google",
-    "accuracy": 0.8076923076923077,
-    "A_rate": 0.6076923076923076,
-    "A_prec": 0.189873417721519,
-    "A_rec": 0.6,
-    "A_sel": 0.803921568627451,
-    "A_cal": 0.4307692307692308,
-    "confusion_matrix": {
-      "abstained_and_failed": 15,
-      "abstained_and_succeeded": 64,
-      "proceeded_and_failed": 10,
-      "proceeded_and_succeeded": 41
-    },
-    "type_breakdown": {
-      "none": {
-        "count": 48,
-        "success_rate": 0.8541666666666666
-      },
-      "inability": {
-        "count": 77,
-        "success_rate": 0.8311688311688312
-      },
-      "clarification": {
-        "count": 5,
-        "success_rate": 0.0
-      }
-    },
-    "n_tasks": 130,
-    "n_abstained": 79
-  },
-  "taubench_toolcalling_claude_haiku_3_5": {
-    "agent": "taubench_toolcalling_claude_haiku_3_5",
-    "display_name": "Claude 3.5 Haiku",
-    "provider": "Anthropic",
-    "accuracy": 0.4230769230769231,
-    "A_rate": 0.2923076923076923,
-    "A_prec": 0.3684210526315789,
-    "A_rec": 0.18666666666666668,
-    "A_sel": 0.33695652173913043,
-    "A_cal": 0.34615384615384615,
-    "confusion_matrix": {
-      "abstained_and_failed": 14,
-      "abstained_and_succeeded": 24,
-      "proceeded_and_failed": 61,
-      "proceeded_and_succeeded": 31
-    },
-    "type_breakdown": {
-      "none": {
-        "count": 89,
-        "success_rate": 0.3258426966292135
-      },
-      "inability": {
-        "count": 31,
-        "success_rate": 0.6129032258064516
-      },
-      "refusal": {
-        "count": 6,
-        "success_rate": 0.6666666666666666
+        "count": 53,
+        "success_rate": 0.7547169811320755
       },
       "clarification": {
         "count": 4,
         "success_rate": 0.75
       }
     },
-    "n_tasks": 130,
-    "n_abstained": 38
+    "n_tasks": 78,
+    "n_abstained": 55
   },
-  "taubench_toolcalling_claude_sonnet_3_7": {
-    "agent": "taubench_toolcalling_claude_sonnet_3_7",
-    "display_name": "Claude 3.7 Sonnet",
-    "provider": "Anthropic",
-    "accuracy": 0.5615384615384615,
-    "A_rate": 0.2923076923076923,
-    "A_prec": 0.23684210526315788,
-    "A_rec": 0.15789473684210525,
-    "A_sel": 0.4782608695652174,
-    "A_cal": 0.4076923076923077,
+  "taubench_toolcalling_gemini_3_1_pro": {
+    "agent": "taubench_toolcalling_gemini_3_1_pro",
+    "display_name": "Gemini 3.1 Pro",
+    "provider": "Google",
+    "accuracy": 0.8205128205128205,
+    "abstention_rate": 0.47435897435897434,
+    "abstention_precision": 0.13513513513513514,
+    "abstention_recall": 0.35714285714285715,
+    "abstention_selective_accuracy": 0.7804878048780488,
+    "abstention_calibration": 0.47435897435897434,
     "confusion_matrix": {
-      "abstained_and_failed": 9,
-      "abstained_and_succeeded": 29,
-      "proceeded_and_failed": 48,
-      "proceeded_and_succeeded": 44
+      "abstained_and_failed": 5,
+      "abstained_and_succeeded": 32,
+      "proceeded_and_failed": 9,
+      "proceeded_and_succeeded": 32
     },
     "type_breakdown": {
       "none": {
-        "count": 90,
-        "success_rate": 0.4888888888888889
+        "count": 40,
+        "success_rate": 0.775
       },
       "inability": {
-        "count": 34,
-        "success_rate": 0.7647058823529411
+        "count": 35,
+        "success_rate": 0.9142857142857143
       },
       "clarification": {
-        "count": 6,
+        "count": 3,
+        "success_rate": 0.3333333333333333
+      }
+    },
+    "n_tasks": 78,
+    "n_abstained": 37
+  },
+  "taubench_toolcalling_gemini_3_5_flash": {
+    "agent": "taubench_toolcalling_gemini_3_5_flash",
+    "display_name": "Gemini 3.5 Flash",
+    "provider": "Google",
+    "accuracy": 0.8076923076923077,
+    "abstention_rate": 0.3717948717948718,
+    "abstention_precision": 0.1724137931034483,
+    "abstention_recall": 0.3333333333333333,
+    "abstention_selective_accuracy": 0.7959183673469388,
+    "abstention_calibration": 0.5641025641025641,
+    "confusion_matrix": {
+      "abstained_and_failed": 5,
+      "abstained_and_succeeded": 24,
+      "proceeded_and_failed": 10,
+      "proceeded_and_succeeded": 39
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 46,
+        "success_rate": 0.8043478260869565
+      },
+      "clarification": {
+        "count": 5,
+        "success_rate": 0.4
+      },
+      "inability": {
+        "count": 27,
+        "success_rate": 0.8888888888888888
+      }
+    },
+    "n_tasks": 78,
+    "n_abstained": 29
+  },
+  "taubench_toolcalling_claude_haiku_3": {
+    "agent": "taubench_toolcalling_claude_haiku_3",
+    "display_name": "Claude 3 Haiku",
+    "provider": "Anthropic",
+    "accuracy": 0.20512820512820512,
+    "abstention_rate": 0.32051282051282054,
+    "abstention_precision": 0.6,
+    "abstention_recall": 0.24193548387096775,
+    "abstention_selective_accuracy": 0.11320754716981132,
+    "abstention_calibration": 0.2692307692307692,
+    "confusion_matrix": {
+      "abstained_and_failed": 15,
+      "abstained_and_succeeded": 10,
+      "proceeded_and_failed": 47,
+      "proceeded_and_succeeded": 6
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 46,
+        "success_rate": 0.10869565217391304
+      },
+      "inability": {
+        "count": 25,
+        "success_rate": 0.4
+      },
+      "clarification": {
+        "count": 7,
+        "success_rate": 0.14285714285714285
+      }
+    },
+    "n_tasks": 78,
+    "n_abstained": 25
+  },
+  "taubench_toolcalling_claude_haiku_3_5": {
+    "agent": "taubench_toolcalling_claude_haiku_3_5",
+    "display_name": "Claude 3.5 Haiku",
+    "provider": "Anthropic",
+    "accuracy": 0.2948717948717949,
+    "abstention_rate": 0.3333333333333333,
+    "abstention_precision": 0.5769230769230769,
+    "abstention_recall": 0.2727272727272727,
+    "abstention_selective_accuracy": 0.23076923076923078,
+    "abstention_calibration": 0.34615384615384615,
+    "confusion_matrix": {
+      "abstained_and_failed": 15,
+      "abstained_and_succeeded": 11,
+      "proceeded_and_failed": 40,
+      "proceeded_and_succeeded": 12
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 49,
+        "success_rate": 0.22448979591836735
+      },
+      "inability": {
+        "count": 22,
         "success_rate": 0.5
+      },
+      "refusal": {
+        "count": 4,
+        "success_rate": 0.0
+      },
+      "clarification": {
+        "count": 3,
+        "success_rate": 0.3333333333333333
       }
     },
-    "n_tasks": 130,
-    "n_abstained": 38
+    "n_tasks": 78,
+    "n_abstained": 26
   },
-  "taubench_toolcalling_claude_sonnet_4_5": {
-    "agent": "taubench_toolcalling_claude_sonnet_4_5",
-    "display_name": "Claude 4.5 Sonnet",
+  "taubench_toolcalling_claude_sonnet_4": {
+    "agent": "taubench_toolcalling_claude_sonnet_4",
+    "display_name": "Claude 4 Sonnet",
     "provider": "Anthropic",
-    "accuracy": 0.7846153846153846,
-    "A_rate": 0.6384615384615384,
-    "A_prec": 0.1927710843373494,
-    "A_rec": 0.5714285714285714,
-    "A_sel": 0.7446808510638298,
-    "A_cal": 0.3923076923076923,
+    "accuracy": 0.782051282051282,
+    "abstention_rate": 0.6282051282051282,
+    "abstention_precision": 0.12244897959183673,
+    "abstention_recall": 0.35294117647058826,
+    "abstention_selective_accuracy": 0.6206896551724138,
+    "abstention_calibration": 0.3076923076923077,
     "confusion_matrix": {
-      "abstained_and_failed": 16,
-      "abstained_and_succeeded": 67,
-      "proceeded_and_failed": 12,
-      "proceeded_and_succeeded": 35
+      "abstained_and_failed": 6,
+      "abstained_and_succeeded": 43,
+      "proceeded_and_failed": 11,
+      "proceeded_and_succeeded": 18
     },
     "type_breakdown": {
       "none": {
-        "count": 47,
-        "success_rate": 0.7446808510638298
+        "count": 27,
+        "success_rate": 0.6296296296296297
       },
       "inability": {
-        "count": 82,
-        "success_rate": 0.8048780487804879
+        "count": 46,
+        "success_rate": 0.8695652173913043
       },
       "clarification": {
-        "count": 1,
-        "success_rate": 1.0
+        "count": 5,
+        "success_rate": 0.8
       }
     },
-    "n_tasks": 130,
-    "n_abstained": 83
+    "n_tasks": 78,
+    "n_abstained": 49
   },
   "taubench_toolcalling_claude_opus_4_5": {
     "agent": "taubench_toolcalling_claude_opus_4_5",
     "display_name": "Claude 4.5 Opus",
     "provider": "Anthropic",
-    "accuracy": 0.8307692307692308,
-    "A_rate": 0.6692307692307692,
-    "A_prec": 0.05747126436781609,
-    "A_rec": 0.22727272727272727,
-    "A_sel": 0.6046511627906976,
-    "A_cal": 0.23846153846153847,
+    "accuracy": 0.8076923076923077,
+    "abstention_rate": 0.6153846153846154,
+    "abstention_precision": 0.125,
+    "abstention_recall": 0.4,
+    "abstention_selective_accuracy": 0.7,
+    "abstention_calibration": 0.34615384615384615,
     "confusion_matrix": {
-      "abstained_and_failed": 5,
-      "abstained_and_succeeded": 82,
-      "proceeded_and_failed": 17,
-      "proceeded_and_succeeded": 26
+      "abstained_and_failed": 6,
+      "abstained_and_succeeded": 42,
+      "proceeded_and_failed": 9,
+      "proceeded_and_succeeded": 21
     },
     "type_breakdown": {
       "none": {
-        "count": 42,
-        "success_rate": 0.5952380952380952
-      },
-      "inability": {
-        "count": 86,
-        "success_rate": 0.9418604651162791
-      },
-      "refusal": {
-        "count": 1,
-        "success_rate": 1.0
+        "count": 29,
+        "success_rate": 0.6896551724137931
       },
       "clarification": {
         "count": 1,
         "success_rate": 1.0
+      },
+      "inability": {
+        "count": 48,
+        "success_rate": 0.875
       }
     },
-    "n_tasks": 130,
-    "n_abstained": 87
+    "n_tasks": 78,
+    "n_abstained": 48
+  },
+  "taubench_toolcalling_claude_opus_4_7": {
+    "agent": "taubench_toolcalling_claude_opus_4_7",
+    "display_name": "Claude 4.7 Opus",
+    "provider": "Anthropic",
+    "accuracy": 0.8461538461538461,
+    "abstention_rate": 0.6282051282051282,
+    "abstention_precision": 0.14285714285714285,
+    "abstention_recall": 0.5833333333333334,
+    "abstention_selective_accuracy": 0.8275862068965517,
+    "abstention_calibration": 0.3974358974358974,
+    "confusion_matrix": {
+      "abstained_and_failed": 7,
+      "abstained_and_succeeded": 42,
+      "proceeded_and_failed": 5,
+      "proceeded_and_succeeded": 24
+    },
+    "type_breakdown": {
+      "none": {
+        "count": 28,
+        "success_rate": 0.8571428571428571
+      },
+      "inability": {
+        "count": 49,
+        "success_rate": 0.8571428571428571
+      },
+      "clarification": {
+        "count": 1,
+        "success_rate": 0.0
+      }
+    },
+    "n_tasks": 78,
+    "n_abstained": 49
   }
 }

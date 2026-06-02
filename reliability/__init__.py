@@ -281,25 +281,6 @@ def index():
             continue
         sorted_bdf = bdf.sort_values("overall_reliability", ascending=False)
         leaderboard_by_bench[bench_display(bname)] = _df_to_json(sorted_bdf)
-    # Compute hero insight: compare most accurate vs most reliable
-    hero_insight = None
-    if not LANDING_SUMMARY.empty:
-        most_accurate = LANDING_SUMMARY.loc[LANDING_SUMMARY["accuracy"].idxmax()]
-        most_reliable = LANDING_SUMMARY.iloc[0]  # already sorted by overall_reliability desc
-        if most_accurate["display_name"] != most_reliable["display_name"]:
-            # Rank of most-accurate agent in reliability ranking
-            rel_names = list(LANDING_SUMMARY["display_name"])
-            acc_rel_rank = rel_names.index(most_accurate["display_name"]) + 1
-            # Rank of most-reliable agent in accuracy ranking
-            acc_sorted = LANDING_SUMMARY.sort_values("accuracy", ascending=False)
-            acc_names = list(acc_sorted["display_name"])
-            rel_acc_rank = acc_names.index(most_reliable["display_name"]) + 1
-            hero_insight = (
-                f"The most accurate agent ({most_accurate['display_name']}) "
-                f"ranks #{acc_rel_rank} in overall reliability, while the most reliable agent "
-                f"({most_reliable['display_name']}) ranks #{rel_acc_rank} in accuracy."
-            )
-
     trend_charts = _build_trend_charts(LANDING_AVERAGED)
     trend_by_bench = {"All Benchmarks": trend_charts}
     for bname, bdf in BENCHMARKS.items():
@@ -310,7 +291,6 @@ def index():
     bench_display_to_raw = {bench_display(b): b for b in BENCHMARKS if b not in _LANDING_EXCLUDE}
     return render_template("reliability/index.html",
         stats=stats,
-        hero_insight=hero_insight,
         leaderboard=leaderboard,
         benchmarks=list(BENCHMARKS.keys()),
         landing_benchmarks=landing_benchmarks,
@@ -449,7 +429,7 @@ _FINDINGS = [
         "color": "#0ea5e9",
         "title": "Reliability Lags Behind Accuracy Improvements",
         "body": (
-            "Despite 18 months of model development, overall reliability shows only small improvements "
+            "Despite 24 months of model development, overall reliability shows only small improvements "
             "over time while accuracy steadily climbs. Improving raw task performance is insufficient "
             "for building dependable AI agents — reliability requires targeted attention beyond "
             "capability scaling alone."

@@ -96,11 +96,11 @@
 
                 <hr>
                 <h5 id="c-out">Outcome Consistency ($C_{\text{out}}$)</h5>
-                <p>Measures how consistently the agent succeeds or fails on each task across repeated runs. For each task $t$ with $K$ runs yielding outcomes $y_{t,k} \in \{0,1\}$, compute the empirical success rate $\hat{p}_t = \frac{1}{K}\sum_k y_{t,k}$ and the sample variance $\hat{\sigma}_t^2 = \frac{1}{K-1}\sum_k (y_{t,k} - \hat{p}_t)^2$. The per-task consistency is:</p>
-                <p class="text-center">$$C_{\text{out},t} = 1 - \frac{\hat{\sigma}_t^2}{\hat{p}_t(1 - \hat{p}_t) + \epsilon}$$</p>
-                <p>The denominator $\hat{p}(1-\hat{p})$ is the maximum Bernoulli variance for that success rate, so the ratio measures how much of the possible variance is realized. The result is clipped to $[0, 1]$. The overall score averages across tasks:</p>
+                <p>Measures how consistently the agent succeeds or fails on each task across repeated runs. For each task $t$ with $K$ runs yielding outcomes $y_{t,k} \in \{0,1\}$, compute the empirical success rate $\hat{p}_t = \frac{1}{K}\sum_k y_{t,k}$. The per-task consistency normalizes the Bernoulli variance $\hat{p}_t(1 - \hat{p}_t)$ by its maximum possible value $0.25$ (attained at $\hat{p}_t = 0.5$):</p>
+                <p class="text-center">$$C_{\text{out},t} = 1 - \frac{\hat{p}_t(1 - \hat{p}_t)}{0.25} = \bigl(2\hat{p}_t - 1\bigr)^2$$</p>
+                <p>Because outcomes are binary, the sample variance is fully determined by the success rate ($\frac{1}{K}\sum_k (y_{t,k} - \hat{p}_t)^2 = \hat{p}_t(1 - \hat{p}_t)$), so $C_{\text{out},t}$ depends only on $\hat{p}_t$ and lies in $[0, 1]$ by construction. The overall score averages across tasks:</p>
                 <p class="text-center">$$C_{\text{out}} = \frac{1}{T}\sum_{t=1}^{T} C_{\text{out},t}$$</p>
-                <p>The metric equals 1 when an agent always succeeds or always fails on every task (all runs agree), and approaches 0 when outcomes are maximally variable.</p>
+                <p>The metric equals 1 when an agent always succeeds or always fails on a task (all runs agree, $\hat{p}_t \in \{0, 1\}$), and 0 when outcomes are maximally split ($\hat{p}_t = 0.5$).</p>
 
                 <hr>
                 <h5 id="c-traj-d">Trajectory Distribution Consistency ($C_{\text{traj}_d}$)</h5>

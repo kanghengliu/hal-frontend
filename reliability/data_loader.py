@@ -25,6 +25,41 @@ RESOURCE_CV_METRICS = [
     "mean_actions_cv", "mean_errors_cv", "mean_call_latency_cv", "mean_conf_cv",
 ]
 
+# The analysis pipeline emits descriptive metric names; the UI (templates, LaTeX
+# labels, leaderboard configs) uses compact codes. Translate at the data-loading
+# boundary so everything downstream stays unchanged.
+_METRIC_RENAME = {
+    "consistency_outcome": "C_out",
+    "consistency_trajectory_distribution": "C_traj_d",
+    "consistency_trajectory_sequence": "C_traj_s",
+    "consistency_confidence": "C_conf",
+    "consistency_resource": "C_res",
+    "predictability_rate_confidence_correlation": "P_rc",
+    "predictability_calibration": "P_cal",
+    "predictability_roc_auc": "P_auroc",
+    "predictability_brier_score": "P_brier",
+    "robustness_fault_injection": "R_fault",
+    "robustness_structural": "R_struct",
+    "robustness_prompt_variation": "R_prompt",
+    "safety_harm_severity": "S_harm",
+    "safety_compliance": "S_comp",
+    "safety_score": "S_safety",
+    "abstention_rate": "A_rate",
+    "abstention_precision": "A_prec",
+    "abstention_recall": "A_rec",
+    "abstention_selective_accuracy": "A_sel",
+    "abstention_calibration": "A_cal",
+}
+
+
+def _rename_metrics(obj):
+    """Recursively rename long metric keys to their short UI codes."""
+    if isinstance(obj, dict):
+        return {_METRIC_RENAME.get(k, k): _rename_metrics(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_rename_metrics(x) for x in obj]
+    return obj
+
 PROVIDER_COLORS = {
     "openai": "#10a37f",
     "anthropic": "#d4a574",
@@ -39,14 +74,21 @@ MODEL_METADATA = {
     'taubench_toolcalling_gpt_o1': {'date': '2024-12-05'},
     'taubench_toolcalling_gpt_5_2': {'date': '2025-12-11'},
     'taubench_toolcalling_gpt_5_2_xhigh': {'date': '2025-12-11'},
+    'taubench_toolcalling_gpt_5_2_medium': {'date': '2025-12-11'},
+    'taubench_toolcalling_gpt_5_5': {'date': '2026-04-23'},
     'taubench_toolcalling_gemini_2_flash': {'date': '2024-12-11'},
     'taubench_toolcalling_gemini_2_5_flash': {'date': '2025-03-25'},
     'taubench_toolcalling_gemini_2_5_pro': {'date': '2025-04-17'},
     'taubench_toolcalling_gemini_3_pro': {'date': '2025-11-18'},
+    'taubench_toolcalling_gemini_3_1_pro': {'date': '2026-02-19'},
+    'taubench_toolcalling_gemini_3_5_flash': {'date': '2026-05-19'},
+    'taubench_toolcalling_claude_haiku_3': {'date': '2024-03-13'},
     'taubench_toolcalling_claude_haiku_3_5': {'date': '2024-10-22'},
     'taubench_toolcalling_claude_sonnet_3_7': {'date': '2025-02-24'},
+    'taubench_toolcalling_claude_sonnet_4': {'date': '2025-05-22'},
     'taubench_toolcalling_claude_sonnet_4_5': {'date': '2025-09-29'},
     'taubench_toolcalling_claude_opus_4_5': {'date': '2025-11-24'},
+    'taubench_toolcalling_claude_opus_4_7': {'date': '2026-04-16'},
     'taubench_fewshot_gpt_4_turbo': {'date': '2024-04-09'},
     'taubench_fewshot_gpt_4o_mini': {'date': '2024-07-18'},
     'taubench_fewshot_gpt_o1': {'date': '2024-12-05'},
@@ -65,13 +107,19 @@ MODEL_METADATA = {
     'gaia_generalist_gpt_o1': {'date': '2024-12-05'},
     'gaia_generalist_gpt_5_2': {'date': '2025-12-11'},
     'gaia_generalist_gpt_5_2_medium': {'date': '2025-12-11'},
+    'gaia_generalist_gpt_5_5': {'date': '2026-04-23'},
     'gaia_generalist_gemini_2_flash': {'date': '2024-12-11'},
     'gaia_generalist_gemini_2_5_flash': {'date': '2025-03-25'},
     'gaia_generalist_gemini_2_5_pro': {'date': '2025-04-17'},
+    'gaia_generalist_gemini_3_1_pro': {'date': '2026-02-19'},
+    'gaia_generalist_gemini_3_5_flash': {'date': '2026-05-19'},
+    'gaia_generalist_claude_haiku_3': {'date': '2024-03-13'},
     'gaia_generalist_claude_haiku_3_5': {'date': '2024-10-22'},
     'gaia_generalist_claude_sonnet_3_7': {'date': '2025-02-24'},
+    'gaia_generalist_claude_sonnet_4': {'date': '2025-05-22'},
     'gaia_generalist_claude_sonnet_4_5': {'date': '2025-09-29'},
     'gaia_generalist_claude_opus_4_5': {'date': '2025-11-24'},
+    'gaia_generalist_claude_opus_4_7': {'date': '2026-04-16'},
 }
 
 PROVIDER_SHAPES = {
@@ -99,14 +147,20 @@ _DISPLAY_NAMES = {
     "gpt_5_2": "GPT-5.2",
     "gpt_5_2_xhigh": "GPT-5.2 (xhigh)",
     "gpt_5_2_medium": "GPT-5.2 (medium)",
+    "gpt_5_5": "GPT-5.5",
     "gemini_2_flash": "Gemini 2.0 Flash",
     "gemini_2_5_flash": "Gemini 2.5 Flash",
     "gemini_2_5_pro": "Gemini 2.5 Pro",
     "gemini_3_pro": "Gemini 3.0 Pro",
+    "gemini_3_1_pro": "Gemini 3.1 Pro",
+    "gemini_3_5_flash": "Gemini 3.5 Flash",
     "claude_haiku_3_5": "Claude 3.5 Haiku",
+    "claude_haiku_3": "Claude 3 Haiku",
     "claude_sonnet_3_7": "Claude 3.7 Sonnet",
     "claude_sonnet_4_5": "Claude Sonnet 4.5",
+    "claude_sonnet_4": "Claude Sonnet 4",
     "claude_opus_4_5": "Claude Opus 4.5",
+    "claude_opus_4_7": "Claude Opus 4.7",
 }
 
 
@@ -143,7 +197,7 @@ def load_benchmarks() -> dict[str, pd.DataFrame]:
     for d in sorted(ANALYSIS_DIR.iterdir()):
         csv_path = d / "reliability_metrics.csv"
         if d.is_dir() and csv_path.exists():
-            df = pd.read_csv(csv_path)
+            df = pd.read_csv(csv_path).rename(columns=_METRIC_RENAME)
             df["provider"] = df["agent"].apply(_guess_provider)
             df["display_name"] = df["agent"].apply(_clean_agent_name)
             df["slug"] = df["display_name"].apply(_slugify)
@@ -300,7 +354,7 @@ def load_dimension_detail(benchmark: str, dimension: str) -> dict | None:
     if not path.exists():
         return None
     with open(path) as f:
-        return json.load(f)
+        return {aid: _rename_metrics(data) for aid, data in json.load(f).items()}
 
 
 def load_agent_benchmark_detail(benchmark: str, agent_key: str) -> dict | None:
@@ -315,7 +369,7 @@ def load_agent_benchmark_detail(benchmark: str, agent_key: str) -> dict | None:
         with open(path) as f:
             data = json.load(f)
         if agent_key in data:
-            result[dim] = data[agent_key]
+            result[dim] = _rename_metrics(data[agent_key])
             found = True
         else:
             result[dim] = None
