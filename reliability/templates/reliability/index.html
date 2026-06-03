@@ -39,6 +39,7 @@
                 </div>
                 <div class="d-flex gap-2 justify-content-center flex-wrap">
                     <a href="https://arxiv.org/abs/2602.16666" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-file-lines me-1"></i>Paper</a>
+                    <a href="#updates" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-bullhorn me-1"></i>What's New</a>
                     <a href="#findings" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-lightbulb me-1"></i>Key Findings</a>
                     <a href="{{ url_for('reliability.methodology') }}" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-book me-1"></i>Methodology</a>
                     <a href="#" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#citeModal"><i class="fa-solid fa-quote-left me-1"></i>Cite This Work</a>
@@ -205,6 +206,83 @@
     </div>
 </div>
 {% endif %}
+
+<!-- What's New in the Final Version -->
+<div id="updates" class="mt-5">
+    <h2 class="mb-2" style="font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; font-weight: 700;">What's New in the Final Version</h2>
+    <p class="text-muted mb-4" style="font-size: 0.95rem;">
+        Our final published paper includes three substantive updates: results for the latest frontier models, a correction to the
+        outcome-consistency metric, and scaffolding fixes that close several loopholes through which the agent could reach GAIA ground truth values during evaluation. All harness changes are documented in
+        <a href="https://github.com/princeton-pli/hal-harness/pull/179" target="_blank" rel="noopener">this PR</a>.
+    </p>
+    <div class="row g-4">
+
+        <!-- New models -->
+        <div class="col-12">
+            <div class="card finding-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="finding-icon-wrap me-3" style="background: #10b98115; color: #10b981;"><i class="fa-solid fa-microchip"></i></div>
+                        <div>
+                            <h5 class="finding-title mb-2">New frontier models</h5>
+                            <p class="finding-body mb-0">Our previous results covered frontier models released up until January 2026. Since then, every frontier provider has released updated models: <strong>GPT-5.5</strong>, <strong>Gemini 3.1 Pro</strong> and <strong>3.5 Flash</strong>, and <strong>Claude Opus 4.7</strong> (we did not yet have a chance to evaluate Claude Opus 4.8). Overall, the general trend we described in the paper holds: all new models make a noticeable jump in accuracy, but their reliability is not improving at nearly the same rate. Once again we see small improvements on &tau;-bench, while on GAIA we observe GPT-5.5 and Opus 4.7 being no more reliable than their predecessors.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Outcome consistency fix -->
+        <div class="col-12">
+            <div class="card finding-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="finding-icon-wrap me-3" style="background: #6366f115; color: #6366f1;"><i class="fa-solid fa-square-root-variable"></i></div>
+                        <div>
+                            <h5 class="finding-title mb-2">Outcome-consistency metric fix</h5>
+                            <p class="finding-body mb-2">Outcome consistency asks: if you run the same task many times, does the agent return the same final response every single time? We run each task $K$ times and look at how often it succeeds. An agent that succeeds every time (or fails every time) is perfectly consistent; one that succeeds half the time and fails half the time is maximally inconsistent. The score is meant to land on a smooth scale from 1.0 (always the same outcome) down to 0.0 (a pure 50/50 split).</p>
+                            <p class="finding-body mb-2">We noticed our metric wasn't actually producing that smooth scale. The original formula normalized the sample variance of the runs by the largest variance a task with that success rate could have. The sample variance used the unbiased &ldquo;<code>ddof=1</code>&rdquo; estimator meant to infer an unknown population from a small sample. Our intent was right, but for pass/fail (Bernoulli) data the <code>ddof=1</code> estimator systematically over-counts the spread by a factor of $K/(K-1)$. As a result, the ratio it produced was always greater than 1 whenever the runs weren't unanimous; the formula then returned a negative number, which got clipped to 0. The consequence was that every task that wasn't perfectly consistent collapsed to zero, which was not the smooth scale we wanted.</p>
+                            <p class="finding-body mb-2">Our fix normalizes the <em>population</em> variance (the spread actually observed across our runs, &ldquo;<code>ddof=0</code>&rdquo;) instead of the inferred sample variance. This is the appropriate choice here, since we want to describe the runs we observed rather than estimate a hypothetical population. It simplifies to a clean closed form:</p>
+                            <ul class="finding-body mb-2">
+                                <li>$\text{consistency} = (2\hat{p} - 1)^2$, where $\hat{p}$ is the observed success rate;</li>
+                                <li>it scales in $[0, 1]$ naturally, with no clipping required; and</li>
+                                <li>it is smooth across the whole range: 1 when the agent always agrees with itself, 0 at a 50/50 split.</li>
+                            </ul>
+                            <p class="finding-detail text-muted mb-0"><small>We thank Ben Crestel, Davi Val&eacute;rio, Jonathan Almeida, and Adriana Prado for independently alerting us to this mistake in our preprint.</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scaffolding -->
+        <div class="col-12">
+            <div class="card finding-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="finding-icon-wrap me-3" style="background: #f59e0b15; color: #f59e0b;"><i class="fa-solid fa-shield-halved"></i></div>
+                        <div>
+                            <h5 class="finding-title mb-2">Scaffolding and data-leakage fixes (GAIA)</h5>
+                            <p class="finding-body mb-2">We audited the HAL Generalist Agent scaffold and closed three ways through which the agent could reach GAIA ground truth:</p>
+                            <ol class="finding-body mb-3">
+                                <li class="mb-2"><strong>Ground truth in <code>input.json</code>.</strong> Each GAIA task's <code>input.json</code> held the task's input and (for ease of evaluation) the ground-truth label. The agent was given only one specific key from this file, but also had access to the directory storing the full file. Our first mitigation sanitizes the input file so it no longer contains the answer. Adam Stein (<a href="https://x.com/adamlsteinl/status/2042655187613995026" target="_blank" rel="noopener">@adamlsteinl</a>) has recently done important work surfacing these issues across a variety of benchmarks.</li>
+                                <li class="mb-2"><strong>Benchmark name leaked through file paths.</strong> Stored attachments (required by many GAIA tasks) were passed to the agent as absolute file paths containing <code>.../datasets--gaia-benchmark--GAIA/...</code>, effectively revealing that it was being evaluated on a common benchmark. Our second mitigation sanitizes the path so it no longer contains the benchmark name.</li>
+                                <li class="mb-0"><strong>Online mirrors.</strong> We found many cases where the agent navigated straight to a known mirror (e.g. a HuggingFace Space hosting <code>gaia_validation.jsonl</code>) to look up answers online. This was possible in our scaffold because a meaningful share of GAIA tasks require browsing the web. Our third mitigation blocks access to common online repositories that host GAIA.</li>
+                            </ol>
+                            <p class="finding-body mb-2">While auditing the scaffold for cheating, we also found and fixed other environmental issues. The agent:</p>
+                            <ul class="finding-body mb-0">
+                                <li>had access to certain top-level Python package imports, but not to many of their sub-modules;</li>
+                                <li>failed on every <code>.xlsx</code> task due to a missing import; and</li>
+                                <li>was given a specific <code>open()</code> function to read files from restricted parts of the file system, yet lacked an equivalent <code>write()</code> function.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
 
 <!-- About -->
 <div id="about" class="mt-5 mb-4">
