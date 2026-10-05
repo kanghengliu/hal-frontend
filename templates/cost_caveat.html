@@ -1,0 +1,14 @@
+{# Shared caveats for the Total Cost column. Included by every leaderboard that shows it. #}
+<div class="mb-4 p-4 bg-blue-50 rounded-lg">
+    <p class="text-sm text-gray-700">
+        Costs are currently calculated without accounting for caching benefits.
+    </p>
+</div>
+<div class="mb-4 p-4 bg-amber-50 rounded-lg">
+    <p class="text-sm text-gray-700">
+        <strong>Known issue (October 5, 2026):</strong> Reported costs and token counts are
+        overstated. Nested trace spans counted the same API response twice, so affected models
+        are inflated by exactly 2&times;. Models logged as a single span are unaffected, so the
+        overstatement is not uniform across rows. Not yet re-derived.
+    </p>
+</div>
