@@ -113,6 +113,22 @@
                     Downloaded traces are encrypted. To decrypt, install <code class="bg-blue-100 px-1 rounded">cryptography</code> (<code class="bg-blue-100 px-1 rounded">pip install cryptography</code>) and use <code class="bg-blue-100 px-1 rounded">hal-decrypt.sh</code>. See <a href="/#traces" class="text-blue-600 hover:text-blue-800 underline">full decryption instructions</a>.
                 </p>
             </div>
+            <div class="mb-4 p-4 bg-amber-50 rounded-lg">
+                <p class="text-sm text-gray-700">
+                    <strong>Using these traces (October 5, 2026):</strong> in TAU-bench archives,
+                    <code class="bg-amber-100 px-1 rounded">taken_actions</code> is not purely agent
+                    behaviour. tau-bench's <code class="bg-amber-100 px-1 rounded">calculate_reward</code>
+                    replays the task's reference actions through the same
+                    <code class="bg-amber-100 px-1 rounded">Env.step</code> that records agent actions, so
+                    for every graded episode those reference actions are appended to the recorded list. On
+                    inspection they appear as a trailing run of actions the agent never issued, and in some
+                    records they sit in the interior with agent actions after them. Each record carries the
+                    reference sequence under <code class="bg-amber-100 px-1 rounded">task.actions</code>;
+                    strip it before treating
+                    <code class="bg-amber-100 px-1 rounded">taken_actions</code> as what the agent did. The
+                    root cause is upstream in tau-bench.
+                </p>
+            </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full">
                     <thead class="bg-gray-50">
